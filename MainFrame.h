@@ -10,6 +10,8 @@ public:
 
 private:
 	//variable
+	static const int MAX_THEMES = 2;
+	int theme = 0;
 
 	//objects
 	wxPanel* panel;
@@ -27,12 +29,21 @@ private:
 	wxButton* confirm_button;
 
 	//lists
-	//wxWindowList all_objects;
+	wxWindowList all_objects;
 
-	//methods
+	//initialization and placement
 	void InitializeObjects();
 	void PlaceObjects();
+
+	//actions
 	void BindObjects();
+	void OnSignButtonClicked(wxCommandEvent& event);
+	void OnChangeThemeButtonClicked(wxCommandEvent& event);
+	void OnConfirmButtonClicked(wxCommandEvent& event);
+	void ChangeSigningMode();
+	void PaintObjects(int theme);
+	void CheckCredentials();
+
+	//additional methods
 	void GetAllChildren(wxWindow* parent, wxWindowList& all_children);
-	void PaintObjects();
 };

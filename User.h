@@ -1,31 +1,51 @@
 #pragma once
 #define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
+#define _CRT_SECURE_NO_WARNINGS
 
 #include <experimental/filesystem>
 #include <iostream>
+#include <sstream>
 #include <fstream>
 #include <string>
 #include <vector>
 #include <format>
 
+#include "cipher.h"
+
 
 class User
 {
 public:
-	User(std::string name, std::string password, int theme)
+	User(std::string name, std::string password, int theme, bool update_users_info)
 	{
 		this->name = name;
 		this->password = password;
 		this->theme = theme;
+		if (update_users_info)
+			GetAllUserInfos();
 	}
 
-	void SaveTheme(int theme);
-	void SaveUserInfo(std::string user_info);
-	int GetTheme();
-	std::vector<std::string> GetUserInfo();
+	void SaveUserInfo();
+	void LoadUserInfo();
 
 private:
+	struct user_info
+	{
+		std::string name;
+		std::string incrypted_password;
+		int authority;
+		int theme;
+	};
+	static std::vector<user_info> users;
 	std::string name;
 	std::string password;
+	int authority = 0;
 	int theme;
+
+	static const char NEXT_LINE_SYMBOL = ',';
+	static const char NEXT_FIELD_SYMBOL = ':';
+	static const int CHUNK = 64;
+
+	static void GetAllUserInfos();
+	std::string ApplyCipher(std::string password, std::string name, int option);
 };
