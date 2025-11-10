@@ -1,5 +1,7 @@
 #pragma once
 #include <wx/wx.h>
+#include <wx/msgdlg.h>
+#include <wx/log.h>
 #include <wx/list.h>
 
 
@@ -40,8 +42,11 @@ private:
 	void OnSignButtonClicked(wxCommandEvent& event);
 	void OnChangeThemeButtonClicked(wxCommandEvent& event);
 	void OnConfirmButtonClicked(wxCommandEvent& event);
+
+	//actions logic
 	void ChangeSigningMode();
 	void PaintObjects(int theme);
+	bool CredentialValidation();
 	void CheckCredentials();
 
 	//additional methods

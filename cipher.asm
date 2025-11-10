@@ -120,29 +120,30 @@ GetKey PROC								;RCX - SOURCE
 	PUSH RBX
 	MOV RBX, RSP
 	PUSH RCX
-	MOVZX RAX, key 
-	MOVZX RAX, BYTE PTR[RCX]
-	INC key
+	XOR R8, R8
+	MOV AL, BYTE PTR[RCX]
+	MOV key[R8], AL
+	INC R8
 	INC RCX
-	PUSH RAX
 	L2:
-		MOVZX RAX, BYTE PTR[RCX]
+		MOV AL, BYTE PTR[RCX]
 		INC RCX
-		CMP RAX, ' '
+		CMP AL, ' '
 		JE new_word
-		CMP RAX, 0
+		CMP AL, 0
 		JE end_of_string
+		JMP L2
 	
 	end_of_string:
-		MOV key, 0
-		POP RAX
+		MOV key[R8], 0
+		LEA RAX, key
 		POP RCX
 		POP RBX
 		RET
 	new_word:
-		MOVZX RAX, key
-		MOVZX RAX, BYTE PTR[RCX]
-		INC key
+		MOV AL, BYTE PTR[RCX]
+		MOV key[R8], AL
+		INC R8
 		JMP L2
 GetKey ENDP
 

@@ -105,7 +105,22 @@ void MainFrame::OnChangeThemeButtonClicked(wxCommandEvent& event)
 
 void MainFrame::OnConfirmButtonClicked(wxCommandEvent& event)
 {
-	CheckCredentials();
+	if (CredentialValidation())
+	{
+		wxString sign_option = sign_button->GetLabelText();
+		if (sign_option == "Sign In")
+		{
+			CheckCredentials();
+		}
+		else
+		{
+
+		}
+	}
+	else
+	{
+
+	}
 }
 
 void MainFrame::ChangeSigningMode()
@@ -122,6 +137,23 @@ void MainFrame::ChangeSigningMode()
 		welcome_label->SetLabelText("Welcome back! Please enter your credentials");
 	}
 	get_password_panel->Layout();
+}
+
+bool MainFrame::CredentialValidation()
+{
+	//temp bool holder
+	bool valid = true;
+
+	wxString user_name = enter_name_field->GetValue();
+	wxString user_password = enter_password_field->GetValue();
+
+	if (user_name == "Alex")
+	{
+		wxMessageBox("You can call it a day now, even though it ain't no day no more", "GO TO SLEEP", wxOK | wxICON_INFORMATION);
+		//wxICON_ERROR, wxICON_WARNING, wxICON_QUESTION
+		wxLogMessage(wxT("You kinda did it"));
+	}
+	return valid;
 }
 
 void MainFrame::CheckCredentials()

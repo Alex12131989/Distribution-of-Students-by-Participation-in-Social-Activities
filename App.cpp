@@ -1,11 +1,13 @@
 #include "App.h"
 #include "MainFrame.h"
+#include "User.h"
 
 wxIMPLEMENT_APP(App);
 
 bool App::OnInit()
 {
-	MainFrame* mainFrame = new MainFrame("Distribution of Students by Partivipation in Social Activities");
+	User::CreateAdminZero();
+	MainFrame* mainFrame = new MainFrame("Distribution of Students by Participation in Social Activities");
 	mainFrame->SetClientSize(MainWindowWidth, MainWindowHeight);
 	mainFrame->Center();
 	mainFrame->Show();

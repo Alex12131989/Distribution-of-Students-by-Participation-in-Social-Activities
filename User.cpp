@@ -2,8 +2,62 @@
 std::vector<User::user_info> User::users;
 using namespace std::experimental::filesystem;
 
+void User::CreateAdminZero()
+{
+	//this code would be given to the customer, and potentially be changed for every new copy
+	auto admin_zero = new User("Root Account", "kldjflksjljkjdshnklhcdykjdhb", 0, 0);
+	admin_zero->SaveUserInfo();
+}
+
+void User::WriteSingleUserToFile(std::ofstream& file, user_info data)
+{
+	auto temp_test = reinterpret_cast<const char*>(&data.authority);
+	auto temp_test_size = sizeof(data.authority);
+	file.write(reinterpret_cast<const char*>(&data.authority), sizeof(data.authority));
+	file.write(reinterpret_cast<const char*>(&NEXT_FIELD_SYMBOL), sizeof(NEXT_FIELD_SYMBOL));
+	file.write(data.name.data(), data.name.length());
+	file.write(reinterpret_cast<const char*>(&NEXT_FIELD_SYMBOL), sizeof(NEXT_FIELD_SYMBOL));
+	file.write(data.incrypted_password.data(), data.incrypted_password.length());
+	file.write(reinterpret_cast<const char*>(&NEXT_FIELD_SYMBOL), sizeof(NEXT_FIELD_SYMBOL));
+	file.write(reinterpret_cast<const char*>(&data.theme), sizeof(data.theme));
+	file.write(reinterpret_cast<const char*>(&NEXT_LINE_SYMBOL), sizeof(NEXT_LINE_SYMBOL));
+}
+
+bool User::ReadSingleUserToFile(std::ifstream& file, user_info& user)
+{
+	char buffer = '\0';
+
+	file.read(reinterpret_cast<char*>(&user.authority), sizeof(user.authority));
+	if (file.eof())
+		return false;
+	for(int i = 0; i < 2; ++i)
+		file.read(&buffer, 1);					//since next char is ':'
+
+	while (buffer != NEXT_FIELD_SYMBOL)
+	{
+		user.name += buffer;
+		file.read(&buffer, 1);
+	}
+	file.read(&buffer, 1);
+
+	while (buffer != NEXT_FIELD_SYMBOL)
+	{
+		user.incrypted_password += buffer;
+		file.read(&buffer, 1);
+	}
+
+	file.read(reinterpret_cast<char*>(&user.theme), sizeof(user.theme));
+
+	file.read(&buffer, 1);						//the next line symbol
+	
+	return true;
+}
+
 void User::SaveUserInfo()
 {
+	if (users.size() == 0)
+		GetAllUserInfos();
+	bool rewritten = false;
 	std::string incrypted_password = ApplyCipher(password, name, 0);
 	path working_path = current_path();
 	working_path /= "Users";
@@ -14,27 +68,22 @@ void User::SaveUserInfo()
 	{
 		if (user.name == name)
 		{
-			rewrite_file.write(reinterpret_cast<const char*>(&authority), sizeof(authority));
-			rewrite_file.write(reinterpret_cast<const char*>(&NEXT_FIELD_SYMBOL), sizeof(NEXT_FIELD_SYMBOL));
-			rewrite_file.write(name.data(), name.length());
-			rewrite_file.write(reinterpret_cast<const char*>(&NEXT_FIELD_SYMBOL), sizeof(NEXT_FIELD_SYMBOL));
-			rewrite_file.write(incrypted_password.data(), incrypted_password.length());
-			rewrite_file.write(reinterpret_cast<const char*>(&NEXT_FIELD_SYMBOL), sizeof(NEXT_FIELD_SYMBOL));
-			rewrite_file.write(reinterpret_cast<const char*>(&theme), sizeof(theme));
-			rewrite_file.write(reinterpret_cast<const char*>(&NEXT_LINE_SYMBOL), sizeof(NEXT_LINE_SYMBOL));
+			auto temp_struct = user_info{ name, incrypted_password, authority, theme };
+			WriteSingleUserToFile(rewrite_file, temp_struct);
+			rewritten = true;
 		}
 		else
 		{
-			rewrite_file.write(reinterpret_cast<const char*>(&user.authority), sizeof(user.authority));
-			rewrite_file.write(reinterpret_cast<const char*>(&NEXT_FIELD_SYMBOL), sizeof(NEXT_FIELD_SYMBOL));
-			rewrite_file.write(user.name.data(), user.name.length());
-			rewrite_file.write(reinterpret_cast<const char*>(&NEXT_FIELD_SYMBOL), sizeof(NEXT_FIELD_SYMBOL));
-			rewrite_file.write(user.incrypted_password.data(), user.incrypted_password.length());
-			rewrite_file.write(reinterpret_cast<const char*>(&NEXT_FIELD_SYMBOL), sizeof(NEXT_FIELD_SYMBOL));
-			rewrite_file.write(reinterpret_cast<const char*>(&user.theme), sizeof(user.theme));
-			rewrite_file.write(reinterpret_cast<const char*>(&NEXT_LINE_SYMBOL), sizeof(NEXT_LINE_SYMBOL));
+			WriteSingleUserToFile(rewrite_file, user);
 		}
 	}
+	if (!rewritten)
+	{
+		auto temp_struct = user_info{ name, incrypted_password, authority, theme };
+		WriteSingleUserToFile(rewrite_file, temp_struct);
+	}
+	rewrite_file.close();
+	GetAllUserInfos();
 }
 
 void User::LoadUserInfo()
@@ -56,37 +105,12 @@ void User::GetAllUserInfos()
 	create_directory(working_path);
 	working_path /= "user_info.bin";
 	std::ifstream working_file(working_path, std::ios::binary);
-
-	std::vector<char> buffer;
-	std::string empty_string = "";
-	std::vector<std::string> lines = { empty_string };
-	while (working_file.read(buffer.data(), CHUNK))
-	{
-		lines[lines.size() - 1].append(buffer.data(), CHUNK);
-		size_t pos = lines[lines.size() - 1].find(NEXT_LINE_SYMBOL);
-		if (pos != std::string::npos)
-		{
-			lines.push_back(empty_string);
-			lines[lines.size() - 1].append(lines[lines.size() - 1].substr(pos + 1));
-			lines[lines.size() - 2].resize(lines[lines.size() - 2].length() - CHUNK + pos);
-		}
-
-	}
-
-	user_info empty_struct;
-	for (std::string line : lines)
-	{
-		users.push_back(empty_struct);
-		std::stringstream string_stream(empty_string);
-		std::getline(string_stream, empty_string, NEXT_FIELD_SYMBOL);
-		users[users.size() - 1].authority = std::stoi(empty_string);
-		std::getline(string_stream, empty_string, NEXT_FIELD_SYMBOL);
-		users[users.size() - 1].name = empty_string;
-		std::getline(string_stream, empty_string, NEXT_FIELD_SYMBOL);
-		users[users.size() - 1].incrypted_password = empty_string;
-		std::getline(string_stream, empty_string);
-		users[users.size() - 1].theme = std::stoi(empty_string);
-	}
+	int i = 0;
+	if (working_file.is_open())
+		i = 1;
+	user_info user;
+	while (ReadSingleUserToFile(working_file, user))
+		users.push_back(user);
 	working_file.close();
 }
 
