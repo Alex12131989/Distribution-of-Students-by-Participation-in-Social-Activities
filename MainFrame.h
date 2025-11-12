@@ -1,7 +1,6 @@
 #pragma once
 #include <wx/wx.h>
 #include <wx/msgdlg.h>
-#include <wx/log.h>
 #include <wx/list.h>
 
 
@@ -46,8 +45,7 @@ private:
 	//actions logic
 	void ChangeSigningMode();
 	void PaintObjects(int theme);
-	bool CredentialValidation();
-	void CheckCredentials();
+	void CredentialValidation();
 
 	//additional methods
 	void GetAllChildren(wxWindow* parent, wxWindowList& all_children);

@@ -1,4 +1,7 @@
 #include "MainFrame.h"
+#include "Exception.h"
+#include "cipher.h"
+#include "User.h"
 
 MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title)
 {
@@ -17,7 +20,16 @@ void MainFrame::InitializeObjects()
 
 	welcome_label = new wxStaticText(get_password_panel, wxID_ANY, "Welcome! Please enter your credentials", wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE_HORIZONTAL);
 	instruction_name_label = new wxStaticText(get_password_panel, wxID_ANY, "Full name");
-	instruction_password_label = new wxStaticText(get_password_panel, wxID_ANY, "Symbols allowed: a-Z, 0-9, !@#$%^&*_");
+	wxString instruction_password_string = "Symbols allowed: a-Z, 0-9, ";
+	for (size_t i = 0; i < alphabet_size; ++i)
+	{
+		int ascii_char_code = static_cast<int>(alphabet[i]);
+		if (!(	ascii_char_code >= 48 && ascii_char_code <= 57 || 
+				ascii_char_code >= 65 && ascii_char_code <= 90 ||
+				ascii_char_code >= 97 && ascii_char_code <= 122))
+			instruction_password_string += alphabet[i];
+	}
+	instruction_password_label = new wxStaticText(get_password_panel, wxID_ANY, instruction_password_string);
 
 	enter_name_field = new wxTextCtrl(get_password_panel, wxID_ANY, "Enter your full name here");
 	enter_password_field = new wxTextCtrl(get_password_panel, wxID_ANY, "Enter password here");
@@ -105,21 +117,59 @@ void MainFrame::OnChangeThemeButtonClicked(wxCommandEvent& event)
 
 void MainFrame::OnConfirmButtonClicked(wxCommandEvent& event)
 {
-	if (CredentialValidation())
+	try
 	{
+		CredentialValidation();
 		wxString sign_option = sign_button->GetLabelText();
+		User* user = new User(enter_name_field->GetValue().ToStdString(), enter_password_field->GetValue().ToStdString(), theme);
 		if (sign_option == "Sign In")
 		{
-			CheckCredentials();
+			user->FindUser();
+			wxMessageBox(wxT("You signed in"), wxT("Congrats"), wxICON_INFORMATION);
+			
 		}
-		else
+		else if (sign_option == "Sign Up")
 		{
-
+			User::AddNewUser(*user);
+			wxMessageBox(wxT("New account was created"), wxT("Congrats"), wxICON_INFORMATION);
 		}
 	}
-	else
+	catch (Exception& exception)
 	{
-
+		switch (exception.code)
+		{
+		case 0:
+			wxMessageBox(wxT("Devs didn't work this out yet"), wxT("Something went wrong"), wxICON_ERROR);
+			break;
+		case 1:
+			wxMessageBox(wxT("Your password contained some illegal characters"), wxT("Illegal characters detected"), wxICON_ERROR);
+			break;
+		case 2:
+			wxMessageBox(wxT("Your name contained some illegal characters"), wxT("Illegal characters detected"), wxICON_ERROR);
+			break;
+		case 3:
+			wxMessageBox(wxT("You didn't enter your name"), wxT("Illegal action detected"), wxICON_ERROR);
+			break;
+		case 4:
+			wxMessageBox(wxT("You didn't enter the password"), wxT("Illegal action detected"), wxICON_ERROR);
+			break;
+		case 5:
+			wxMessageBox(wxT("Check your credentials, account weren't found"), wxT("Account doesn't exist"), wxICON_ERROR);
+			break;
+		case 6:
+			wxMessageBox(wxT("Try signing in"), wxT("Account already exists"), wxICON_WARNING);
+			break;
+		case 7:
+			wxMessageBox(wxT("Check your credentials"), wxT("Wrong password"), wxICON_ERROR);
+			break;
+		default:
+			wxMessageBox(wxT("Woah, you just did something I haven't thought you would"),
+						wxT("Congrants on thinking outside the box"), wxOK || wxICON_WARNING);
+		}
+	}
+	catch (...)
+	{
+		wxMessageBox(wxT(":<"), wxT("Something went wrong"), wxICON_ERROR);
 	}
 }
 
@@ -137,29 +187,37 @@ void MainFrame::ChangeSigningMode()
 		welcome_label->SetLabelText("Welcome back! Please enter your credentials");
 	}
 	get_password_panel->Layout();
+
 }
 
-bool MainFrame::CredentialValidation()
+void MainFrame::CredentialValidation()
 {
-	//temp bool holder
-	bool valid = true;
-
 	wxString user_name = enter_name_field->GetValue();
+	if (user_name == "")
+		throw Exception("Name was not entered");
+	for (char name_char : user_name)
+		if(!(	static_cast<int>(name_char) >= 65 && static_cast<int>(name_char) <= 90 ||
+				static_cast<int>(name_char) >= 97 && static_cast<int>(name_char) <= 122 || 
+				static_cast<int>(name_char) == 46 || static_cast<int>(name_char) == 32))
+			throw Exception("Not allowed character in name");
+
 	wxString user_password = enter_password_field->GetValue();
-
-	if (user_name == "Alex")
+	if (user_name == "")
+		throw Exception("Password was not entered");
+	for (char name_char : user_password)
 	{
-		wxMessageBox("You can call it a day now, even though it ain't no day no more", "GO TO SLEEP", wxOK | wxICON_INFORMATION);
-		//wxICON_ERROR, wxICON_WARNING, wxICON_QUESTION
-		wxLogMessage(wxT("You kinda did it"));
+		bool found_code = false;
+		for (size_t i = 0; i < alphabet_size; ++i)
+			if (static_cast<int>(name_char) == static_cast<int>(alphabet[i]))
+			{
+				found_code = true;
+				i = alphabet_size;
+			}
+		if (!found_code)
+			throw Exception("Not allowed character in password");
 	}
-	return valid;
 }
 
-void MainFrame::CheckCredentials()
-{
-
-}
 
 void MainFrame::GetAllChildren(wxWindow* parent, wxWindowList& all_children)
 {
@@ -173,5 +231,4 @@ void MainFrame::GetAllChildren(wxWindow* parent, wxWindowList& all_children)
 		all_children.Append(direct_child);
 		GetAllChildren(direct_child, all_children);
 	}
-
 }

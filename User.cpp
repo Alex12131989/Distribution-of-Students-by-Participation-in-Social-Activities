@@ -1,11 +1,14 @@
+#include "Exception.h"
+#include "cipher.h"
 #include "User.h"
+
 std::vector<User::user_info> User::users;
 using namespace std::experimental::filesystem;
 
 void User::CreateAdminZero()
 {
 	//this code would be given to the customer, and potentially be changed for every new copy
-	auto admin_zero = new User("Root Account", "kldjflksjljkjdshnklhcdykjdhb", 0, 0);
+	auto admin_zero = new User("Root Account", "kldjflksjljkjdshnklhcdykjdhb", 0);
 	admin_zero->SaveUserInfo();
 }
 
@@ -55,15 +58,13 @@ bool User::ReadSingleUserToFile(std::ifstream& file, user_info& user)
 
 void User::SaveUserInfo()
 {
-	if (users.size() == 0)
-		GetAllUserInfos();
 	bool rewritten = false;
 	std::string incrypted_password = ApplyCipher(password, name, 0);
 	path working_path = current_path();
 	working_path /= "Users";
 	create_directory(working_path);
 	working_path /= "user_info.bin";
-	std::ofstream rewrite_file(working_path, std::ios::binary);
+	std::ofstream rewrite_file(working_path, std::ios::binary || std::ios::out);
 	for (user_info user : users)
 	{
 		if (user.name == name)
@@ -86,16 +87,32 @@ void User::SaveUserInfo()
 	GetAllUserInfos();
 }
 
-void User::LoadUserInfo()
+void User::FindUser()
 {
+	bool found = false, verified = false;
 	for (size_t i = 0; i < users.size(); ++i)
 		if (users[i].name == name)
 		{
+			found = true;
 			authority = users[i].authority;
-			password = ApplyCipher(users[i].incrypted_password, users[i].name, 1);
+			std::string pulled_password = ApplyCipher(users[i].incrypted_password, users[i].name, 1);
+			if (password == pulled_password)
+				verified = true;
 			theme = users[i].theme;
 			i = users.size();
 		}
+	if (!found)
+		throw Exception("Could not find the user");
+	else if (!verified)
+		throw Exception("Wrong password");
+}
+
+void User::AddNewUser(User new_user)
+{
+	for (user_info user : users)
+		if (user.name == new_user.name)
+			throw Exception("User already exists");
+	new_user.SaveUserInfo();
 }
 
 void User::GetAllUserInfos()
@@ -105,12 +122,13 @@ void User::GetAllUserInfos()
 	create_directory(working_path);
 	working_path /= "user_info.bin";
 	std::ifstream working_file(working_path, std::ios::binary);
-	int i = 0;
-	if (working_file.is_open())
-		i = 1;
 	user_info user;
+	users.clear();
 	while (ReadSingleUserToFile(working_file, user))
+	{
 		users.push_back(user);
+		user = {};
+	}
 	working_file.close();
 }
 
@@ -123,10 +141,10 @@ std::string User::ApplyCipher(std::string password, std::string name, int option
 	switch (option)
 	{
 	case 0:
-		Encode(char_password, key);
+		Encode(key, char_password); //check this crap
 		break;
 	case 1:
-		Decode(char_password, key);
+		Decode(key, char_password);
 		break;
 	}
 	password = char_password;

@@ -1,34 +1,31 @@
 #pragma once
-#define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
-#define _CRT_SECURE_NO_WARNINGS
-
 #include <experimental/filesystem>
 #include <iostream>
 #include <sstream>
 #include <fstream>
+#include <cstring>
 #include <string>
 #include <vector>
 #include <format>
-
-#include "cipher.h"
 
 
 class User
 {
 public:
-	User(std::string name, std::string password, int theme, bool update_users_info)
+	User(std::string name, std::string password, int theme)
 	{
 		this->name = name;
 		this->password = password;
 		this->theme = theme;
 		if (name == "Root Account")
 			this->authority = 1;
-		if (update_users_info)
+		if (users.size() == 0)
 			GetAllUserInfos();
 	}
 
 	void SaveUserInfo();
-	void LoadUserInfo();
+	void FindUser();
+	static void AddNewUser(User new_user);
 	static void CreateAdminZero();
 
 private:

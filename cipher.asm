@@ -95,6 +95,7 @@ CipherLogic MACRO direction
 ENDM
 
 .DATA
+	PUBLIC alphabet, alphabet_size
 	alphabet DB "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*_", 0
 	alphabet_size DQ ($ - alphabet) - 1
 
@@ -107,6 +108,7 @@ PUBLIC Encode, Decode, GetKey
 
 Encode PROC								;RCX - KEY, RDX - PLAINTEXT
 	CipherLogic 1
+
 	RET
 Encode ENDP
 
