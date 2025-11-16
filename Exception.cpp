@@ -16,6 +16,8 @@ Exception::Exception(const std::string& message) : runtime_error(message)
 		code = 6;
 	else if (message == "Wrong password")
 		code = 7;
+	else if (message == "Wrong value")
+		code = 8;
 	else
 		code = 0;
 }

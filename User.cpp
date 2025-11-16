@@ -14,14 +14,27 @@ void User::CreateAdminZero()
 
 void User::WriteSingleUserToFile(std::ofstream& file, user_info data)
 {
-	auto temp_test = reinterpret_cast<const char*>(&data.authority);
-	auto temp_test_size = sizeof(data.authority);
 	file.write(reinterpret_cast<const char*>(&data.authority), sizeof(data.authority));
 	file.write(reinterpret_cast<const char*>(&NEXT_FIELD_SYMBOL), sizeof(NEXT_FIELD_SYMBOL));
+
 	file.write(data.name.data(), data.name.length());
 	file.write(reinterpret_cast<const char*>(&NEXT_FIELD_SYMBOL), sizeof(NEXT_FIELD_SYMBOL));
+
 	file.write(data.incrypted_password.data(), data.incrypted_password.length());
 	file.write(reinterpret_cast<const char*>(&NEXT_FIELD_SYMBOL), sizeof(NEXT_FIELD_SYMBOL));
+
+	file.write(data.participation_in_soc_activities.data(), data.participation_in_soc_activities.length());
+	file.write(reinterpret_cast<const char*>(&NEXT_FIELD_SYMBOL), sizeof(NEXT_FIELD_SYMBOL));
+
+	file.write(reinterpret_cast<const char*>(&data.number), sizeof(data.number));
+	file.write(reinterpret_cast<const char*>(&NEXT_FIELD_SYMBOL), sizeof(NEXT_FIELD_SYMBOL));
+
+	file.write(reinterpret_cast<const char*>(&data.gpa), sizeof(data.gpa));
+	file.write(reinterpret_cast<const char*>(&NEXT_FIELD_SYMBOL), sizeof(NEXT_FIELD_SYMBOL));
+
+	file.write(reinterpret_cast<const char*>(&data.income_per_fam_member), sizeof(data.income_per_fam_member));
+	file.write(reinterpret_cast<const char*>(&NEXT_FIELD_SYMBOL), sizeof(NEXT_FIELD_SYMBOL));
+
 	file.write(reinterpret_cast<const char*>(&data.theme), sizeof(data.theme));
 	file.write(reinterpret_cast<const char*>(&NEXT_LINE_SYMBOL), sizeof(NEXT_LINE_SYMBOL));
 }
@@ -34,7 +47,7 @@ bool User::ReadSingleUserToFile(std::ifstream& file, user_info& user)
 	if (file.eof())
 		return false;
 	for(int i = 0; i < 2; ++i)
-		file.read(&buffer, 1);					//since next char is ':'
+		file.read(&buffer, 1);					//since next char is ':' and we need buffer not being equal to it
 
 	while (buffer != NEXT_FIELD_SYMBOL)
 	{
@@ -48,9 +61,24 @@ bool User::ReadSingleUserToFile(std::ifstream& file, user_info& user)
 		user.incrypted_password += buffer;
 		file.read(&buffer, 1);
 	}
+	file.read(&buffer, 1);
+
+	while (buffer != NEXT_FIELD_SYMBOL)
+	{
+		user.participation_in_soc_activities += buffer;
+		file.read(&buffer, 1);
+	}
+
+	file.read(reinterpret_cast<char*>(&user.number), sizeof(user.number));
+	file.read(&buffer, 1);
+
+	file.read(reinterpret_cast<char*>(&user.gpa), sizeof(user.gpa));
+	file.read(&buffer, 1);
+
+	file.read(reinterpret_cast<char*>(&user.income_per_fam_member), sizeof(user.income_per_fam_member));
+	file.read(&buffer, 1);
 
 	file.read(reinterpret_cast<char*>(&user.theme), sizeof(user.theme));
-
 	file.read(&buffer, 1);						//the next line symbol
 	
 	return true;
@@ -69,7 +97,9 @@ void User::SaveUserInfo()
 	{
 		if (user.name == name)
 		{
-			auto temp_struct = user_info{ name, incrypted_password, authority, theme };
+			auto temp_struct = user_info{ .name = name, .incrypted_password = incrypted_password,
+				.participation_in_soc_activities = participation_in_soc_activities,  .authority = authority, 
+				.number = number, .gpa = gpa, .income_per_fam_member = income_per_fam_member, .theme = theme};
 			WriteSingleUserToFile(rewrite_file, temp_struct);
 			rewritten = true;
 		}
@@ -80,7 +110,9 @@ void User::SaveUserInfo()
 	}
 	if (!rewritten)
 	{
-		auto temp_struct = user_info{ name, incrypted_password, authority, theme };
+		auto temp_struct = user_info{ .name = name, .incrypted_password = incrypted_password,
+				.participation_in_soc_activities = participation_in_soc_activities,  .authority = authority,
+				.number = number, .gpa = gpa, .income_per_fam_member = income_per_fam_member, .theme = theme };
 		WriteSingleUserToFile(rewrite_file, temp_struct);
 	}
 	rewrite_file.close();
@@ -134,19 +166,97 @@ void User::GetAllUserInfos()
 
 std::string User::ApplyCipher(std::string password, std::string name, int option)
 {
-	char* char_password = new char[password.length()], * char_name = new char[name.length()], * key;
-	strcpy(char_password, password.c_str());
-	strcpy(char_name, name.c_str());
-	key = GetKey(char_name);
+	char* key = GetKey(name.data());
 	switch (option)
 	{
 	case 0:
-		Encode(key, char_password); //check this crap
+		Encode(key, password.data());
 		break;
 	case 1:
-		Decode(key, char_password);
+		Decode(key, password.data());
 		break;
 	}
-	password = char_password;
 	return password;
+}
+
+std::string User::GetName()
+{
+	return name;
+}
+
+std::string User::GetParticipation()
+{
+	return participation_in_soc_activities;
+}
+
+int User::GetAuthority()
+{
+	return authority;
+}
+
+int User::GetNumber()
+{
+	return number;
+}
+
+float User::GetGPA()
+{
+	return std::round(gpa*100)/100;
+}
+
+float User::GetIncomePerFamMember()
+{
+	return std::round(income_per_fam_member * 100)/100;
+}
+
+int User::GetTheme()
+{
+	return theme;
+}
+
+void User::SetParticipation(std::string participation)
+{
+	if (participation == "None" || participation == "Low" || participation == "Medium" || participation == "High")
+		this->participation_in_soc_activities = participation;
+	else
+		throw Exception("Wrong value");
+}
+
+void User::SetNumber(int place)
+{
+	if (place >= 1)
+		number = place;
+	else
+		throw Exception("Wrong value");
+}
+
+void User::SetGPA(float gpa)
+{
+	if (gpa >= 0 && gpa <= MAX_GPA)
+		this->gpa = gpa;
+	else
+		throw Exception("Wrong value");
+}
+
+void User::SetIncomePerFamMember(float income)
+{
+	if (income >= 0)
+		income_per_fam_member = income;
+	else
+		throw Exception("Wrong value");
+}
+
+void User::SetTheme(int theme)
+{
+	if (theme < 0)
+		throw new std::out_of_range("Theme can't be negative");
+	this->theme = theme;
+}
+
+void User::SetMaxGPA(int max_gpa)
+{
+	if (max_gpa >= 4)
+		MAX_GPA = max_gpa;
+	else
+		throw Exception("Wrong value");
 }

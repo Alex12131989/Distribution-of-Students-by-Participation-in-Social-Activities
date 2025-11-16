@@ -1,9 +1,9 @@
-#include "MainFrame.h"
+#include "AuthenticationWindow.h"
 #include "Exception.h"
 #include "cipher.h"
 #include "User.h"
 
-MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title)
+AuthenticationWindow::AuthenticationWindow(const wxString& title) : wxFrame(nullptr, wxID_ANY, title)
 {
 	InitializeObjects();
 	GetAllChildren(this, all_objects);
@@ -12,7 +12,7 @@ MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title)
 	BindObjects();
 }
 
-void MainFrame::InitializeObjects()
+void AuthenticationWindow::InitializeObjects()
 {
 	panel = new wxPanel(this);
 	get_password_panel = new wxPanel(panel, wxID_ANY);
@@ -39,7 +39,7 @@ void MainFrame::InitializeObjects()
 	confirm_button = new wxButton(buttons_panel, wxID_ANY, "Confirm");
 }
 
-void MainFrame::PlaceObjects()
+void AuthenticationWindow::PlaceObjects()
 {
 	wxBoxSizer* buttons_sizer = new wxBoxSizer(wxHORIZONTAL);
 	buttons_sizer->Add(sign_button, wxSizerFlags(1));
@@ -48,6 +48,7 @@ void MainFrame::PlaceObjects()
 	buttons_sizer->AddStretchSpacer();
 	buttons_sizer->Add(confirm_button, wxSizerFlags(1));
 	buttons_panel->SetSizer(buttons_sizer);
+	buttons_panel->Layout();
 
 	wxBoxSizer* panel_sizer = new wxBoxSizer(wxVERTICAL);
 	panel_sizer->Add(welcome_label, wxSizerFlags(1).Expand());
@@ -60,6 +61,7 @@ void MainFrame::PlaceObjects()
 	panel_sizer->AddSpacer(10);
 	panel_sizer->Add(buttons_panel, wxSizerFlags(1).Expand());
 	get_password_panel->SetSizer(panel_sizer);
+	get_password_panel->Layout();
 
 	wxBoxSizer* outer_sizer = new wxBoxSizer(wxHORIZONTAL);
 	outer_sizer->AddStretchSpacer();
@@ -67,9 +69,10 @@ void MainFrame::PlaceObjects()
 	outer_sizer->AddStretchSpacer();
 	panel->SetSizer(outer_sizer);
 	outer_sizer->SetSizeHints(this);
+	this->Layout();
 }
 
-void MainFrame::PaintObjects(int theme)
+void AuthenticationWindow::PaintObjects(int theme)
 {
 	panel->SetBackgroundColour(RGB(200, 100, 100));
 	get_password_panel->SetBackgroundColour(RGB(0, 0, 0));
@@ -93,29 +96,30 @@ void MainFrame::PaintObjects(int theme)
 		}
 	}
 	this->Refresh();
+	this->Update();
 }
 
-void MainFrame::BindObjects()
+void AuthenticationWindow::BindObjects()
 {
 	//sign_button->Bind(wxEVT_BUTTON, [=](wxCommandEvent) {OnSignButtonClicked(wxCommandEvent);});
-	sign_button->Bind(wxEVT_BUTTON, &MainFrame::OnSignButtonClicked, this);
-	change_theme_button->Bind(wxEVT_BUTTON, &MainFrame::OnChangeThemeButtonClicked, this);
-	confirm_button->Bind(wxEVT_BUTTON, &MainFrame::OnConfirmButtonClicked, this);
+	sign_button->Bind(wxEVT_BUTTON, &AuthenticationWindow::OnSignButtonClicked, this);
+	change_theme_button->Bind(wxEVT_BUTTON, &AuthenticationWindow::OnChangeThemeButtonClicked, this);
+	confirm_button->Bind(wxEVT_BUTTON, &AuthenticationWindow::OnConfirmButtonClicked, this);
 }
 
-void MainFrame::OnSignButtonClicked(wxCommandEvent& event)
+void AuthenticationWindow::OnSignButtonClicked(wxCommandEvent& event)
 {
 	ChangeSigningMode();
 }
 
-void MainFrame::OnChangeThemeButtonClicked(wxCommandEvent& event)
+void AuthenticationWindow::OnChangeThemeButtonClicked(wxCommandEvent& event)
 {
 	if (++theme >= MAX_THEMES)
 		theme = theme % MAX_THEMES;
 	PaintObjects(theme);
 }
 
-void MainFrame::OnConfirmButtonClicked(wxCommandEvent& event)
+void AuthenticationWindow::OnConfirmButtonClicked(wxCommandEvent& event)
 {
 	try
 	{
@@ -173,7 +177,7 @@ void MainFrame::OnConfirmButtonClicked(wxCommandEvent& event)
 	}
 }
 
-void MainFrame::ChangeSigningMode()
+void AuthenticationWindow::ChangeSigningMode()
 {
 	wxString sign_button_text = sign_button->GetLabelText();
 	if (sign_button_text == "Sign In")
@@ -190,7 +194,7 @@ void MainFrame::ChangeSigningMode()
 
 }
 
-void MainFrame::CredentialValidation()
+void AuthenticationWindow::CredentialValidation()
 {
 	wxString user_name = enter_name_field->GetValue();
 	if (user_name == "")
@@ -218,8 +222,7 @@ void MainFrame::CredentialValidation()
 	}
 }
 
-
-void MainFrame::GetAllChildren(wxWindow* parent, wxWindowList& all_children)
+void AuthenticationWindow::GetAllChildren(wxWindow* parent, wxWindowList& all_children)
 {
 	if (!parent)
 		return;

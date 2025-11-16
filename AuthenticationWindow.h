@@ -4,10 +4,10 @@
 #include <wx/list.h>
 
 
-class MainFrame : public wxFrame
+class AuthenticationWindow : public wxFrame
 {
 public:
-	MainFrame(const wxString& title);
+	AuthenticationWindow(const wxString& title);
 
 private:
 	//variable
