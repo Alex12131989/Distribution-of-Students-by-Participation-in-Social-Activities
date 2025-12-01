@@ -1,5 +1,6 @@
 #pragma once
 #include <experimental/filesystem>
+#include <algorithm>
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -10,10 +11,22 @@
 #include <format>
 #include <cmath>
 
-
 class User
 {
 public:
+	struct user_info
+	{
+		std::string name = "";
+		std::string incrypted_password = "";
+		std::string participation_in_soc_activities = "";
+		int authority = 0;
+		std::string number = "";
+		float gpa = 0;
+		float income_per_fam_member = 0;
+		int theme = 0;
+	};
+
+	static std::vector<user_info> users;
 	User(std::string name, std::string password, int theme)
 	{
 		this->name = name;
@@ -21,48 +34,49 @@ public:
 		this->theme = theme;
 		if (name == "Root Account")
 			this->authority = 1;
-		if (users.size() == 0)
+		if (root == nullptr)
 			GetAllUserInfos();
 	}
 
-	struct user_info
-	{
-		std::string name = "";
-		std::string incrypted_password = "";
-		std::string participation_in_soc_activities = "";
-		int authority = 0;
-		int number = 0;
-		float gpa = 0;
-		float income_per_fam_member = 0;
-		int theme = 0;
-	};
-	static std::vector<user_info> users;
-
 	void SaveUserInfo();
 	void FindUser();
-	static void AddNewUser(User new_user);
+	void AddNewUser();
 	static void CreateAdminZero();
 
+	static void Sort(std::vector<User::user_info>& users, int subject, bool ascending);
 	std::string GetName();
 	std::string GetParticipation();
+	std::string GetNumber();
 	int GetAuthority();
-	int GetNumber();
 	float GetGPA();
 	float GetIncomePerFamMember();
 	int GetTheme();
 
 	void SetParticipation(std::string participation);
-	void SetNumber(int place);
+	void SetNumber(std::string number);
 	void SetGPA(float gpa);
 	void SetIncomePerFamMember(float income);
 	void SetTheme(int theme);
 	void SetMaxGPA(int max_gpa);
 
 private:
+	//BT/BST
+	struct Node
+	{
+		user_info data;
+		Node* left;
+		Node* right;
+		Node(user_info new_user) : data(new_user), left(nullptr), right(nullptr) {}
+	};
+	Node* root = nullptr;
+	static std::vector<float> Quicksort(std::vector<float> values, bool ascending);
+	void UnitializeBT(Node* root);
+	Node* Insert(Node* root, user_info new_user);
+	std::vector<User::user_info> RepresentBTAsVector(Node* root);
 	std::string name = "";
 	std::string password = "";
 	std::string participation_in_soc_activities = "None"; //i'm thinking something like, none, low, medium, high, whatever
-	int number = 0;
+	std::string number = "";
 	float gpa = 0;
 	float income_per_fam_member = 0;
 	int authority = 0;
@@ -74,8 +88,8 @@ private:
 	static const char NEXT_FIELD_SYMBOL = ':';
 	static const std::streamsize CHUNK = 64;
 
-	static void GetAllUserInfos();
+	void GetAllUserInfos();
 	std::string ApplyCipher(std::string password, std::string name, int option);
 	void WriteSingleUserToFile(std::ofstream& file, user_info data);
-	static bool ReadSingleUserToFile(std::ifstream& file, user_info& user);
+	bool ReadSingleUserToFile(std::ifstream& file, user_info& user);
 };

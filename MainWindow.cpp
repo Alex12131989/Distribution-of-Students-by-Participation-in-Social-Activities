@@ -1,4 +1,5 @@
 #include "MainWindow.h"
+#include "Exception.h"
 #include "User.h"
 #include "App.h"
 
@@ -8,33 +9,59 @@ MainWindow::MainWindow(const wxString& title, User* user) : wxFrame(nullptr, wxI
 	user = new User("Alex", "pT@@3X*", 0);
 	user->FindUser();
 
-	for (User::user_info user : User::users)
-		all_users.push_back(user);
-	InitializeObjects(user->GetAuthority());
-	BindObjects(user->GetAuthority());
-	PlaceObjects(user->GetAuthority());
-	PaintObjects(user);
+	InitializeObjects(user);
+	BindObjects(user);
+	PlaceObjects(user);
+	App::GetAllChildren(this, all_objects);
+	PaintObjects(user, user->GetTheme());
 }
 
-void MainWindow::InitializeObjects(const int access_mode)
+void MainWindow::InitializeObjects(User* user)
 {
+	GetThemeIcons(user->GetTheme());
 	panel = new wxPanel(this);
 
 	taskbar_panel = new wxPanel(panel, wxID_ANY);
 
 	current_card_panel = new wxPanel(panel, wxID_ANY);
 
-	taskbar_centeralize_panel = new wxPanel(taskbar_panel, wxID_ANY);
+	taskbar_centralize_panel = new wxPanel(taskbar_panel, wxID_ANY);
 
-	authority_display_label = new wxStaticText(taskbar_centeralize_panel, wxID_ANY, "");
+	themes_panel = new wxPanel(taskbar_centralize_panel, wxID_ANY);
+
+	themes_dropdown_box = new wxChoice(themes_panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, themes_options_list);
+	themes_dropdown_box->SetSelection(user->GetTheme());
+	themes_image = new wxStaticBitmap(themes_panel, wxID_ANY, change_theme_bitmap);
+
+	search_panel = new wxPanel(taskbar_centralize_panel, wxID_ANY);
+	search_field = new wxTextCtrl(search_panel, wxID_ANY, "");
+	search_image = new wxStaticBitmap(search_panel, wxID_ANY, search_bitmap);
+
+	sort_panel = new wxPanel(taskbar_centralize_panel, wxID_ANY);
+	sort_dropdown_box = new wxChoice(sort_panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, sort_options_list);
+	sort_order_button = new wxBitmapButton(sort_panel, wxID_ANY, sort_bitmap);
+
+	authority_display_panel = new wxPanel(taskbar_centralize_panel, wxID_ANY);
+
+	authority_display_label = new wxStaticText(authority_display_panel, wxID_ANY, "");
 
 	profile_scroll_panel = new wxScrolledWindow(current_card_panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL);
 	//profile_scroll_panel->SetMinSize(wxSize(MainWindowWidth*0.4, -1));
 
+	current_user_info_panel = new wxPanel(profile_scroll_panel, wxID_ANY);
+
+	wxBitmap profile_bitmap(GetProfileImage(wxString(user->GetName()), {200, 200}));
+	profile_picture = new wxStaticBitmap(profile_scroll_panel, wxID_ANY, profile_bitmap, wxDefaultPosition, wxDefaultSize);
+
+	wxString user_information_string = "Name: " + user->GetName() + "\nParticipation in social events: " + user->GetParticipation() + 
+		"\nNumber: " + user->GetNumber() + "\nGrade point average: " + wxString::Format(wxT("%.2f"), user->GetGPA()) + 
+		"\nIncome per family member: " + wxString::Format(wxT("%.2f"), user->GetIncomePerFamMember());
+	current_user_info_label = new wxStaticText(current_user_info_panel, wxID_ANY, user_information_string);
+
 	other_profiles_scroll_panel = new wxScrolledWindow(current_card_panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL);
 	//other_profiles_scroll_panel->SetMinSize(wxSize(MainWindowWidth * 0.55, -1));
 
-	switch (access_mode)
+	switch (user->GetAuthority())
 	{
 	case 0:
 		authority_display_label->SetLabelText("User");
@@ -45,40 +72,84 @@ void MainWindow::InitializeObjects(const int access_mode)
 	}
 }
 
-void MainWindow::PlaceObjects(const int access_mode)
+void MainWindow::PlaceObjects(User* user)
 {
-	wxBoxSizer* taskbar_centeralize_sizer = new wxBoxSizer(wxHORIZONTAL);
-	switch (access_mode)
+	wxBoxSizer* search_sizer = new wxBoxSizer(wxHORIZONTAL);
+	search_sizer->Add(search_field, wxSizerFlags().Expand());
+	search_sizer->Add(search_image, wxSizerFlags().Expand());
+	search_panel->SetSizer(search_sizer);
+	search_panel->Layout();
+
+	wxBoxSizer* sort_sizer = new wxBoxSizer(wxHORIZONTAL);
+	sort_sizer->Add(sort_dropdown_box, wxSizerFlags().Expand());
+	sort_sizer->Add(sort_order_button, wxSizerFlags().Expand());
+	sort_panel->SetSizer(sort_sizer);
+	sort_panel->Layout();
+
+	wxBoxSizer* theme_sizer = new wxBoxSizer(wxHORIZONTAL);
+	theme_sizer->Add(themes_dropdown_box, wxSizerFlags().Expand());
+	theme_sizer->Add(themes_image, wxSizerFlags().Expand());
+	themes_panel->SetSizer(theme_sizer);
+	themes_panel->Layout();
+
+	wxBoxSizer* authority_display_sizer = new wxBoxSizer(wxVERTICAL);
+	authority_display_sizer->AddStretchSpacer();
+	authority_display_sizer->Add(authority_display_label);
+	authority_display_sizer->AddStretchSpacer();
+	authority_display_panel->SetSizer(authority_display_sizer);
+	authority_display_panel->Layout();
+
+	wxBoxSizer* taskbar_centralize_sizer = new wxBoxSizer(wxHORIZONTAL);
+	switch (user->GetAuthority())
 	{
 	case 0:
+		taskbar_centralize_sizer->AddSpacer(22);
 		break;
 	case 1:
+		taskbar_centralize_sizer->AddSpacer(22);
 		break;
 	}
-	taskbar_centeralize_sizer->AddStretchSpacer();
-	taskbar_centeralize_sizer->Add(authority_display_label, wxSizerFlags());
-	taskbar_centeralize_sizer->AddSpacer(10);
-	taskbar_centeralize_panel->SetSizer(taskbar_centeralize_sizer);
-	taskbar_centeralize_panel->Layout();
+	taskbar_centralize_sizer->AddSpacer(22);
+	taskbar_centralize_sizer->AddStretchSpacer();
+	taskbar_centralize_sizer->Add(sort_panel, wxSizerFlags().Expand());
+	taskbar_centralize_sizer->AddSpacer(20);
+	taskbar_centralize_sizer->Add(search_panel, wxSizerFlags().Expand());
+	taskbar_centralize_sizer->AddSpacer(20);
+	taskbar_centralize_sizer->Add(themes_panel, wxSizerFlags().Expand());
+	taskbar_centralize_sizer->AddSpacer(20);
+	taskbar_centralize_sizer->Add(authority_display_panel, wxSizerFlags().Expand());
+	taskbar_centralize_sizer->AddSpacer(10);
+	taskbar_centralize_panel->SetSizer(taskbar_centralize_sizer);
+	taskbar_centralize_panel->Layout();
 
 	wxBoxSizer* taskbar_sizer = new wxBoxSizer(wxVERTICAL);
 	taskbar_sizer->AddStretchSpacer();
-	taskbar_sizer->Add(taskbar_centeralize_panel, wxSizerFlags().Expand());
+	taskbar_sizer->Add(taskbar_centralize_panel, wxSizerFlags().Expand());
 	taskbar_sizer->AddStretchSpacer();
 	taskbar_panel->SetSizer(taskbar_sizer);
 	taskbar_panel->Layout();
 
+	wxBoxSizer* profile_info_sizer = new wxBoxSizer(wxHORIZONTAL);
+	profile_info_sizer->AddStretchSpacer();
+	profile_info_sizer->Add(current_user_info_label, wxSizerFlags().Expand());
+	profile_info_sizer->AddStretchSpacer();
+	current_user_info_panel->SetSizer(profile_info_sizer);
+	current_user_info_panel->Layout();
+
+	PlaceOtherProfiles(user->GetName(), "");
+
+	wxBoxSizer* profile_sizer = new wxBoxSizer(wxVERTICAL);
+	profile_sizer->AddSpacer(50);
+	profile_sizer->Add(profile_picture, wxSizerFlags().Expand());
+	profile_sizer->AddSpacer(20);
+	profile_sizer->Add(current_user_info_panel, wxSizerFlags().Expand());
+	profile_scroll_panel->SetSizer(profile_sizer);
+	profile_scroll_panel->Layout();
+
 	wxBoxSizer* current_card_sizer = new wxBoxSizer(wxHORIZONTAL);
-	switch (access_mode)
-	{
-	case 0:
-		break;
-	case 1:
-		break;
-	}
-	current_card_sizer->Add(profile_scroll_panel, wxSizerFlags(33).Expand());
+	current_card_sizer->Add(profile_scroll_panel, wxSizerFlags(335).Expand());
 	current_card_sizer->AddStretchSpacer(1);
-	current_card_sizer->Add(other_profiles_scroll_panel, wxSizerFlags(66).Expand());
+	current_card_sizer->Add(other_profiles_scroll_panel, wxSizerFlags(664).Expand());
 	current_card_panel->SetSizer(current_card_sizer);
 	current_card_panel->Layout();
 
@@ -96,9 +167,137 @@ void MainWindow::PlaceObjects(const int access_mode)
 	this->Layout();
 }
 
-void MainWindow::BindObjects(const int access_mode)
+void MainWindow::PlaceOtherProfiles(wxString current_user_name, wxString delimiter)
 {
-	switch (access_mode)
+	wxBoxSizer* other_users_sizer = new wxBoxSizer(wxVERTICAL);
+	other_profiles_labels_list.clear();
+	currently_displayed_other_users.clear();
+	if (delimiter != "")
+	{
+		//exact match
+		for (User::user_info other_user : User::users)
+			if (other_user.name == delimiter &&other_user.name != current_user_name)
+			{
+				currently_displayed_other_users.push_back(other_user);
+				auto other_user_panel = new wxPanel(other_profiles_scroll_panel, wxID_ANY);
+				other_profiles_labels_list.push_back(other_user_panel);
+				ShapeOtherUsersLabels(other_user_panel, other_user);
+				other_users_sizer->Add(other_user_panel, wxSizerFlags().Expand());
+				other_users_sizer->AddSpacer(20);
+			}
+
+		//partial match
+		for (User::user_info other_user : User::users)
+		{
+			wxString other_user_name = other_user.name;
+			if (other_user_name.MakeLower().Find(delimiter) != wxNOT_FOUND && other_user.name != current_user_name)
+			{
+				currently_displayed_other_users.push_back(other_user);
+				auto other_user_panel = new wxPanel(other_profiles_scroll_panel, wxID_ANY);
+				other_profiles_labels_list.push_back(other_user_panel);
+				ShapeOtherUsersLabels(other_user_panel, other_user);
+				other_users_sizer->Add(other_user_panel, wxSizerFlags().Expand());
+				other_users_sizer->AddSpacer(20);
+			}
+		}
+	}
+	else
+		//all users(except for current)
+		for (User::user_info other_user : User::users)
+			if (other_user.name != current_user_name)
+			{
+				currently_displayed_other_users.push_back(other_user);
+				auto other_user_panel = new wxPanel(other_profiles_scroll_panel, wxID_ANY);
+				other_profiles_labels_list.push_back(other_user_panel);
+				ShapeOtherUsersLabels(other_user_panel, other_user);
+				other_users_sizer->Add(other_user_panel, wxSizerFlags().Expand());
+				other_users_sizer->AddSpacer(20);
+			}
+	other_profiles_scroll_panel->SetSizer(other_users_sizer);
+	other_profiles_scroll_panel->Layout();
+}
+
+wxImage MainWindow::GetProfileImage(wxString user_name, wxSize size)
+{
+	wxLogNull noLog;//supresses 'image not found error' (in case fallback image needed to be loaded)
+	wxImage profile_image;
+	wxString working_path = wxGetCwd();
+	working_path += "\\Users\\users_profile_icons\\" + user_name + ".png";
+	if (!profile_image.LoadFile(working_path, wxBITMAP_TYPE_ANY))
+	{
+		working_path = wxGetCwd();
+		working_path += "\\Assets\\General\\user_profile.png";
+		profile_image.LoadFile(working_path, wxBITMAP_TYPE_PNG);
+	}
+	profile_image = profile_image.Scale(size, wxIMAGE_QUALITY_NEAREST);
+	return profile_image;
+}
+
+wxImage MainWindow::GetAssetsImage(wxString relative_address, wxSize size)
+{
+	wxImage profile_image;
+	wxString working_path = wxGetCwd();
+	working_path += "\\" + relative_address;
+	if (!profile_image.LoadFile(working_path, wxBITMAP_TYPE_PNG))
+		throw Exception("File not found");
+	profile_image = profile_image.Scale(size, wxIMAGE_QUALITY_HIGH);
+	return profile_image;
+}
+
+void MainWindow::SetProfileImage(wxString address, wxString user_name)
+{
+	wxImage profile_image;
+	wxString working_path = wxGetCwd();
+	working_path += "/Users/users_profile_icons/" + user_name;
+	if (wxRenameFile(address, working_path))
+	{
+
+	}
+	else
+		throw Exception("File not found");
+}
+
+void MainWindow::ShapeOtherUsersLabels(wxPanel* parent_panel, User::user_info user_information)
+{
+	wxPanel* centralize_panel = new wxPanel(parent_panel, wxID_ANY);
+	wxBitmap profile_bitmap(GetProfileImage(user_information.name, { 50, 50 }));
+	wxStaticBitmap* profile_image = new wxStaticBitmap(centralize_panel, wxID_ANY, profile_bitmap);
+	wxString other_user_information_string;
+	if (user_information.authority == 0)
+		other_user_information_string = "User ";
+	else
+		other_user_information_string = "Administrator ";
+	other_user_information_string += user_information.name + " " + user_information.number + "\nParticipation in social events: " + 
+		user_information.participation_in_soc_activities + "\nGPA:" + wxString::Format(wxT("%.2f"),user_information.gpa) + 
+		"\nIncome per family member: " + wxString::Format(wxT("%.2f"),user_information.income_per_fam_member);
+	wxStaticText* profile_information = new wxStaticText(centralize_panel, wxID_ANY, other_user_information_string);
+
+	wxBoxSizer* profile_information_sizer = new wxBoxSizer(wxHORIZONTAL);
+	profile_information_sizer->AddSpacer(13);
+	profile_information_sizer->Add(profile_image, wxSizerFlags(20).Expand());
+	profile_information_sizer->AddStretchSpacer(5);
+	profile_information_sizer->Add(profile_information, wxSizerFlags(75).Expand());
+	centralize_panel->SetSizer(profile_information_sizer);
+	centralize_panel->Layout();
+
+	wxBoxSizer* outer_sizer = new wxBoxSizer(wxVERTICAL);
+	outer_sizer->AddStretchSpacer();
+	outer_sizer->Add(centralize_panel);
+	outer_sizer->AddStretchSpacer();
+	parent_panel->SetSizer(outer_sizer);
+	parent_panel->Layout();
+
+}
+
+void MainWindow::BindObjects(User* user)
+{
+	themes_dropdown_box->Bind(wxEVT_COMMAND_CHOICE_SELECTED, [=](wxCommandEvent& event) {OnThemeOptionSelected(event, user);});
+	this->Bind(wxEVT_CLOSE_WINDOW, [=](wxCloseEvent& event) {MainWindow::OnClose(event, user);});
+	search_field->Bind(wxEVT_TEXT, [=](wxCommandEvent& event) {MainWindow::OnSearchFieldChanged(event, user);});
+	//Bind(wxEVT_BUTTON, &MainWindow::OnSortModeButtonClicked, this);
+	sort_order_button->Bind(wxEVT_BUTTON, [=](wxCommandEvent& event) {MainWindow::OnSortModeButtonClicked(event, user);});
+	sort_dropdown_box->Bind(wxEVT_COMMAND_CHOICE_SELECTED, [=](wxCommandEvent& event) {OnSortOptionSelected(event, user);});
+	switch (user->GetAuthority())
 	{
 	case 0:
 		break;
@@ -107,22 +306,145 @@ void MainWindow::BindObjects(const int access_mode)
 	}
 }
 
-void MainWindow::PaintObjects(User* user)
+//you can refactor it, come on....
+void MainWindow::PaintObjects(User* user, int theme)
 {
-	//user->SetTheme(1);
-	panel->SetBackgroundColour(RGB(0, 0, 0));
-	taskbar_panel->SetBackgroundColour(RGB(100, 100, 100));
-	current_card_panel->SetBackgroundColour(RGB(200, 200, 200));
-	authority_display_label->SetBackgroundColour(RGB(255, 0, 0));
-	profile_scroll_panel->SetBackgroundColour(RGB(0, 0, 255));
-	other_profiles_scroll_panel->SetBackgroundColour(RGB(0, 255, 0));
-
-
+	user->SetTheme(theme);
+	wxVector<wxWindow*> taskbar_children;
+	switch (theme)
+	{
+	case 0:
+		for (auto object : all_objects)
+		{
+			object->SetBackgroundColour(RGB(0, 0, 0));
+			object->SetForegroundColour(RGB(255, 255, 255));
+		}
+		App::GetAllChildren(taskbar_panel, taskbar_children);
+		taskbar_panel->SetBackgroundColour(RGB(13, 13, 13));
+		for (auto child : taskbar_children)
+			child->SetBackgroundColour(RGB(13, 13, 13));
+		other_profiles_scroll_panel->SetBackgroundColour(RGB(5, 5, 5));
+		break;
+	case 1:
+		for (auto object : all_objects)
+		{
+			object->SetBackgroundColour(RGB(255, 255, 255));
+			object->SetForegroundColour(RGB(0, 0, 0));
+		}
+		App::GetAllChildren(taskbar_panel, taskbar_children); 
+		taskbar_panel->SetBackgroundColour(RGB(245, 245, 245));
+		for (auto child : taskbar_children)
+			child->SetBackgroundColour(RGB(245, 245, 245));
+		other_profiles_scroll_panel->SetBackgroundColour(RGB(250, 250, 250));
+		break;
+	}
+	current_card_panel->SetBackgroundColour(RGB(130, 130, 130));
+	panel->SetBackgroundColour(RGB(130, 130, 130));
+	authority_display_label->SetForegroundColour(RGB(200, 35, 13));
 	this->Refresh();
 	this->Update();
 }
 
-void MainWindow::GetProfileImage()
+void MainWindow::GetThemeIcons(int theme)
 {
-	//get the photo, otherwise get stock image
+	switch (theme)
+	{
+	case 0:
+		search_bitmap = GetAssetsImage("Assets\\theme 1\\magnifying_glass.png", { icon_size, icon_size });
+		sort_bitmap = GetAssetsImage("Assets\\theme 1\\sort_ascending.png", { icon_size, icon_size });
+		change_theme_bitmap = GetAssetsImage("Assets\\theme 1\\pointing_circles.png", { icon_size, icon_size });
+		break;
+	case 1:
+		search_bitmap = GetAssetsImage("Assets\\theme 2\\magnifying_glass.png", { icon_size, icon_size });
+		sort_bitmap = GetAssetsImage("Assets\\theme 2\\sort_ascending.png", { icon_size, icon_size });
+		change_theme_bitmap = GetAssetsImage("Assets\\theme 2\\pointing_circles.png", { icon_size, icon_size });
+		break;
+	}
+}
+
+void MainWindow::OnSearchFieldChanged(wxCommandEvent& event, User* user)
+{
+	wxString searched_string = search_field->GetValue();
+	for (auto other_profile_label : other_profiles_labels_list)
+		other_profile_label->Destroy();
+	PlaceOtherProfiles(user->GetName(), searched_string);
+	all_objects.clear();
+	App::GetAllChildren(this, all_objects);
+	PaintObjects(user, themes_dropdown_box->GetSelection());
+}
+
+void MainWindow::OnSortOptionSelected(wxCommandEvent& event, User* user)
+{
+	Sort(sort_dropdown_box->GetSelection(), user);
+}
+
+void MainWindow::OnSortModeButtonClicked(wxCommandEvent& event, User* user)
+{
+	if (ascending)
+	{
+		ascending = false;
+		switch (themes_dropdown_box->GetSelection())
+		{
+		case 0:
+			sort_bitmap = GetAssetsImage("Assets\\theme 1\\sort_descending.png", {icon_size, icon_size});
+			break;
+		case 1:
+			sort_bitmap = GetAssetsImage("Assets\\theme 2\\sort_descending.png", { icon_size, icon_size });
+			break;
+		}
+	}
+	else
+	{
+		ascending = true;
+		switch (themes_dropdown_box->GetSelection())
+		{
+		case 0:
+			sort_bitmap = GetAssetsImage("Assets\\theme 1\\sort_ascending.png", { icon_size, icon_size });
+			break;
+		case 1:
+			sort_bitmap = GetAssetsImage("Assets\\theme 2\\sort_ascending.png", { icon_size, icon_size });
+			break;
+		}
+	}
+	sort_order_button->SetBitmapLabel(sort_bitmap);
+	sort_order_button->Refresh();
+	sort_order_button->Update();
+	if (sort_dropdown_box->GetSelection() != wxNOT_FOUND)
+		Sort(sort_dropdown_box->GetSelection(), user);
+}
+
+void MainWindow::OnThemeOptionSelected(wxCommandEvent& event, User* user)
+{
+	int current_theme = themes_dropdown_box->GetSelection();
+	if (current_theme != user->GetTheme())
+		PaintObjects(user, current_theme);
+}
+
+void MainWindow::OnClose(wxCloseEvent& event, User* user)
+{
+	user->SaveUserInfo();
+	event.Skip();
+}
+
+void MainWindow::Sort(int subject, User* user)
+{
+	for (auto other_profile_label : other_profiles_labels_list)
+		other_profile_label->Destroy();
+	other_profiles_labels_list.clear();
+
+	User::Sort(currently_displayed_other_users, subject, ascending);
+	wxBoxSizer* other_users_sizer = new wxBoxSizer(wxVERTICAL);
+	for (User::user_info other_user : currently_displayed_other_users)
+	{
+		auto other_user_panel = new wxPanel(other_profiles_scroll_panel, wxID_ANY);
+		other_profiles_labels_list.push_back(other_user_panel);
+		ShapeOtherUsersLabels(other_user_panel, other_user);
+		other_users_sizer->Add(other_user_panel, wxSizerFlags().Expand());
+		other_users_sizer->AddSpacer(20);
+	}
+	other_profiles_scroll_panel->SetSizer(other_users_sizer);
+	other_profiles_scroll_panel->Layout();
+	all_objects.clear();
+	App::GetAllChildren(this, all_objects);
+	PaintObjects(user, themes_dropdown_box->GetSelection());
 }

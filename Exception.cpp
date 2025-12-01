@@ -18,6 +18,10 @@ Exception::Exception(const std::string& message) : runtime_error(message)
 		code = 7;
 	else if (message == "Wrong value")
 		code = 8;
+	else if (message == "User was not found")
+		code = 9;
+	else if (message == "File not found")
+		code = 10;
 	else
 		code = 0;
 }

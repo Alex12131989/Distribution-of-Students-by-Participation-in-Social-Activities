@@ -2,14 +2,15 @@
 #include "Exception.h"
 #include "cipher.h"
 #include "User.h"
+#include "App.h"
 
 AuthenticationWindow::AuthenticationWindow(const wxString& title) : wxFrame(nullptr, wxID_ANY, title)
 {
 	InitializeObjects();
-	GetAllChildren(this, all_objects);
-	PaintObjects(theme);
 	PlaceObjects();
 	BindObjects();
+	App::GetAllChildren(this, all_objects);
+	PaintObjects(theme);
 }
 
 void AuthenticationWindow::InitializeObjects()
@@ -74,13 +75,6 @@ void AuthenticationWindow::PlaceObjects()
 
 void AuthenticationWindow::PaintObjects(int theme)
 {
-	panel->SetBackgroundColour(RGB(200, 100, 100));
-	get_password_panel->SetBackgroundColour(RGB(0, 0, 0));
-	buttons_panel->SetBackgroundColour(RGB(200, 200, 121));
-	welcome_label->SetBackgroundColour(RGB(100, 100, 100));
-	instruction_name_label->SetBackgroundColour(RGB(0, 0, 100));
-	instruction_password_label->SetBackgroundColour(RGB(100, 0, 0));
-
 	for (auto object : all_objects)
 	{
 		switch (theme)
@@ -101,7 +95,6 @@ void AuthenticationWindow::PaintObjects(int theme)
 
 void AuthenticationWindow::BindObjects()
 {
-	//sign_button->Bind(wxEVT_BUTTON, [=](wxCommandEvent) {OnSignButtonClicked(wxCommandEvent);});
 	sign_button->Bind(wxEVT_BUTTON, &AuthenticationWindow::OnSignButtonClicked, this);
 	change_theme_button->Bind(wxEVT_BUTTON, &AuthenticationWindow::OnChangeThemeButtonClicked, this);
 	confirm_button->Bind(wxEVT_BUTTON, &AuthenticationWindow::OnConfirmButtonClicked, this);
@@ -134,7 +127,7 @@ void AuthenticationWindow::OnConfirmButtonClicked(wxCommandEvent& event)
 		}
 		else if (sign_option == "Sign Up")
 		{
-			User::AddNewUser(*user);
+			user->AddNewUser();
 			wxMessageBox(wxT("New account was created"), wxT("Congrats"), wxICON_INFORMATION);
 		}
 	}
@@ -219,19 +212,5 @@ void AuthenticationWindow::CredentialValidation()
 			}
 		if (!found_code)
 			throw Exception("Not allowed character in password");
-	}
-}
-
-void AuthenticationWindow::GetAllChildren(wxWindow* parent, wxWindowList& all_children)
-{
-	if (!parent)
-		return;
-
-	wxWindowList direct_children = parent->GetChildren();
-
-	for (auto direct_child : direct_children)
-	{
-		all_children.Append(direct_child);
-		GetAllChildren(direct_child, all_children);
 	}
 }

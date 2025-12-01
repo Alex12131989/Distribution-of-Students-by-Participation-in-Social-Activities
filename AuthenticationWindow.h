@@ -1,8 +1,8 @@
 #pragma once
-#include <wx/wx.h>
 #include <wx/msgdlg.h>
+#include <wx/image.h>
 #include <wx/list.h>
-
+#include <wx/wx.h>
 
 class AuthenticationWindow : public wxFrame
 {
@@ -30,7 +30,7 @@ private:
 	wxButton* confirm_button;
 
 	//lists
-	wxWindowList all_objects;
+	wxVector<wxWindow*> all_objects;
 
 	//initialization and placement
 	void InitializeObjects();
@@ -46,7 +46,4 @@ private:
 	void ChangeSigningMode();
 	void PaintObjects(int theme);
 	void CredentialValidation();
-
-	//additional methods
-	void GetAllChildren(wxWindow* parent, wxWindowList& all_children);
 };

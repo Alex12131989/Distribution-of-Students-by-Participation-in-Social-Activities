@@ -8,4 +8,5 @@ class App : public wxApp
 {
 public: 
 	bool OnInit();
+	static void GetAllChildren(wxWindow* parent, wxVector<wxWindow*>& all_children);
 };
