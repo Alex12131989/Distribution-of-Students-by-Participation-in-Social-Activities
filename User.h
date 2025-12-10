@@ -41,6 +41,7 @@ public:
 	void SaveUserInfo();
 	void FindUser();
 	void AddNewUser();
+	static void DeleteUser(user_info user_to_delete);
 	static void CreateAdminZero();
 
 	static void Sort(std::vector<User::user_info>& users, int subject, bool ascending);
@@ -90,6 +91,6 @@ private:
 
 	void GetAllUserInfos();
 	std::string ApplyCipher(std::string password, std::string name, int option);
-	void WriteSingleUserToFile(std::ofstream& file, user_info data);
-	bool ReadSingleUserToFile(std::ifstream& file, user_info& user);
+	static void WriteSingleUserToFile(std::ofstream& file, user_info data);
+	static bool ReadSingleUserToFile(std::ifstream& file, user_info& user);
 };

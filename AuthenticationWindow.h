@@ -4,6 +4,8 @@
 #include <wx/list.h>
 #include <wx/wx.h>
 
+#include "User.h"
+
 class AuthenticationWindow : public wxFrame
 {
 public:
@@ -46,4 +48,5 @@ private:
 	void ChangeSigningMode();
 	void PaintObjects(int theme);
 	void CredentialValidation();
+	void OpenMainWindow(User* user);
 };

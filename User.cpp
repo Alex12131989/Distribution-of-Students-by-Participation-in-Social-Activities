@@ -5,7 +5,6 @@
 std::vector<User::user_info> User::users;
 using namespace std::experimental::filesystem;
 
-//this mf doesn't sort shit, check it out later
 std::vector<float> User::Quicksort(std::vector<float> values, bool ascending)
 {
 	if (values.size() <= 1)
@@ -14,11 +13,13 @@ std::vector<float> User::Quicksort(std::vector<float> values, bool ascending)
 	float pivot = values[values.size() - 1], j = -1;
 	for (size_t i = 0; i < values.size() - 1; i++)
 		if (ascending)
+		{
 			if (values[i] < pivot)
 			{
 				j++;
 				std::swap(values[j], values[i]);
 			}
+		}
 		else
 			if (values[i] > pivot)
 			{
@@ -176,7 +177,7 @@ void User::SaveUserInfo()
 	working_path /= "Users";
 	create_directory(working_path);
 	working_path /= "user_info.bin";
-	std::ofstream rewrite_file(working_path, std::ios::binary || std::ios::out);
+	std::ofstream rewrite_file(working_path, std::ios::binary | std::ios::out | std::ios::trunc);
 	for (user_info user : users)
 	{
 		if (user.name == name)
@@ -235,6 +236,25 @@ void User::AddNewUser()
 	SaveUserInfo();
 }
 
+void User::DeleteUser(user_info user_to_delete)
+{
+	path working_path = current_path();
+	working_path /= "Users";
+	create_directory(working_path);
+	working_path /= "user_info.bin";
+	std::ofstream rewrite_file(working_path, std::ios::binary | std::ios::out | std::ios::trunc);
+	for (user_info user : users)
+	{
+		if (user_to_delete.name != user.name)
+		{
+			WriteSingleUserToFile(rewrite_file, user);
+		}
+	}
+	rewrite_file.close();
+	User* access_user = new User("", "", 0);
+	access_user->GetAllUserInfos();
+}
+
 void User::GetAllUserInfos()
 {
 	path working_path = current_path();
@@ -273,7 +293,7 @@ std::string User::ApplyCipher(std::string password, std::string name, int option
 void User::Sort(std::vector<User::user_info>& users, int subject, bool ascending)
 {
 	std::vector<float> values;
-	for (auto user : users)
+	for (User::user_info user : users)
 	{
 		switch (subject)
 		{
@@ -352,10 +372,7 @@ void User::SetParticipation(std::string participation)
 
 void User::SetNumber(std::string number)
 {
-	//if (regex check)
-		this->number = number;
-	//else
-	//	throw Exception("Wrong value");
+	this->number = number;
 }
 
 void User::SetGPA(float gpa)

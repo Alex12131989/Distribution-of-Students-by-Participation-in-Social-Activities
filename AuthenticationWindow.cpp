@@ -1,4 +1,5 @@
 #include "AuthenticationWindow.h"
+#include "MainWindow.h"
 #include "Exception.h"
 #include "cipher.h"
 #include "User.h"
@@ -32,8 +33,8 @@ void AuthenticationWindow::InitializeObjects()
 	}
 	instruction_password_label = new wxStaticText(get_password_panel, wxID_ANY, instruction_password_string);
 
-	enter_name_field = new wxTextCtrl(get_password_panel, wxID_ANY, "Enter your full name here");
-	enter_password_field = new wxTextCtrl(get_password_panel, wxID_ANY, "Enter password here");
+	enter_name_field = new wxTextCtrl(get_password_panel, wxID_ANY, "");
+	enter_password_field = new wxTextCtrl(get_password_panel, wxID_ANY, "");
 
 	sign_button = new wxButton(buttons_panel, wxID_ANY, "Sign Up");
 	change_theme_button = new wxButton(buttons_panel, wxID_ANY, "Change theme");
@@ -122,12 +123,12 @@ void AuthenticationWindow::OnConfirmButtonClicked(wxCommandEvent& event)
 		if (sign_option == "Sign In")
 		{
 			user->FindUser();
-			wxMessageBox(wxT("You signed in"), wxT("Congrats"), wxICON_INFORMATION);
-			
+			OpenMainWindow(user);
 		}
 		else if (sign_option == "Sign Up")
 		{
 			user->AddNewUser();
+			OpenMainWindow(user);
 			wxMessageBox(wxT("New account was created"), wxT("Congrats"), wxICON_INFORMATION);
 		}
 	}
@@ -213,4 +214,15 @@ void AuthenticationWindow::CredentialValidation()
 		if (!found_code)
 			throw Exception("Not allowed character in password");
 	}
+}
+
+void AuthenticationWindow::OpenMainWindow(User* user)
+{
+	this->Destroy();
+	wxInitAllImageHandlers();
+	MainWindow* main_window = new MainWindow("Distribution of Students by Participation in Social Activities", user);
+	main_window->SetMinSize(wxSize(MainWindowWidth, MainWindowHeight));
+	main_window->SetClientSize(MainWindowWidth, MainWindowHeight);
+	main_window->Center();
+	main_window->Show();
 }

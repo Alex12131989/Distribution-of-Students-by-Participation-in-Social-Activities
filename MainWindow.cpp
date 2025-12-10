@@ -1,19 +1,16 @@
 #include "MainWindow.h"
+#include "EditWindow.h"
 #include "Exception.h"
 #include "User.h"
 #include "App.h"
 
 MainWindow::MainWindow(const wxString& title, User* user) : wxFrame(nullptr, wxID_ANY, title)
 {
-	//for time being while I did NOT log into any account
-	user = new User("Alex", "pT@@3X*", 0);
-	user->FindUser();
-
 	InitializeObjects(user);
 	BindObjects(user);
 	PlaceObjects(user);
 	App::GetAllChildren(this, all_objects);
-	PaintObjects(user, user->GetTheme());
+	PaintObjects(user->GetTheme());
 }
 
 void MainWindow::InitializeObjects(User* user)
@@ -41,6 +38,8 @@ void MainWindow::InitializeObjects(User* user)
 	sort_dropdown_box = new wxChoice(sort_panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, sort_options_list);
 	sort_order_button = new wxBitmapButton(sort_panel, wxID_ANY, sort_bitmap);
 
+	add_button = new wxBitmapButton(taskbar_centralize_panel, wxID_ANY, add_bitmap);
+
 	authority_display_panel = new wxPanel(taskbar_centralize_panel, wxID_ANY);
 
 	authority_display_label = new wxStaticText(authority_display_panel, wxID_ANY, "");
@@ -49,6 +48,7 @@ void MainWindow::InitializeObjects(User* user)
 	//profile_scroll_panel->SetMinSize(wxSize(MainWindowWidth*0.4, -1));
 
 	current_user_info_panel = new wxPanel(profile_scroll_panel, wxID_ANY);
+	edit_current_user_info_button = new wxBitmapButton(profile_scroll_panel, wxID_ANY, edit_bitmap);
 
 	wxBitmap profile_bitmap(GetProfileImage(wxString(user->GetName()), {200, 200}));
 	profile_picture = new wxStaticBitmap(profile_scroll_panel, wxID_ANY, profile_bitmap, wxDefaultPosition, wxDefaultSize);
@@ -100,16 +100,11 @@ void MainWindow::PlaceObjects(User* user)
 	authority_display_panel->Layout();
 
 	wxBoxSizer* taskbar_centralize_sizer = new wxBoxSizer(wxHORIZONTAL);
-	switch (user->GetAuthority())
+	if (user->GetAuthority() == 1)
 	{
-	case 0:
 		taskbar_centralize_sizer->AddSpacer(22);
-		break;
-	case 1:
-		taskbar_centralize_sizer->AddSpacer(22);
-		break;
+		taskbar_centralize_sizer->Add(add_button, wxSizerFlags().Expand());
 	}
-	taskbar_centralize_sizer->AddSpacer(22);
 	taskbar_centralize_sizer->AddStretchSpacer();
 	taskbar_centralize_sizer->Add(sort_panel, wxSizerFlags().Expand());
 	taskbar_centralize_sizer->AddSpacer(20);
@@ -138,8 +133,15 @@ void MainWindow::PlaceObjects(User* user)
 
 	PlaceOtherProfiles(user->GetName(), "");
 
+	wxBoxSizer* edit_button_sizer = new wxBoxSizer(wxHORIZONTAL);
+	edit_button_sizer->AddStretchSpacer(1);
+	edit_button_sizer->Add(edit_current_user_info_button, wxSizerFlags(0).Expand());
+	edit_button_sizer->AddSpacer(20);
+
 	wxBoxSizer* profile_sizer = new wxBoxSizer(wxVERTICAL);
 	profile_sizer->AddSpacer(50);
+	profile_sizer->Add(edit_button_sizer, wxSizerFlags().Expand());
+	profile_sizer->AddSpacer(10);
 	profile_sizer->Add(profile_picture, wxSizerFlags().Expand());
 	profile_sizer->AddSpacer(20);
 	profile_sizer->Add(current_user_info_panel, wxSizerFlags().Expand());
@@ -170,8 +172,10 @@ void MainWindow::PlaceObjects(User* user)
 void MainWindow::PlaceOtherProfiles(wxString current_user_name, wxString delimiter)
 {
 	wxBoxSizer* other_users_sizer = new wxBoxSizer(wxVERTICAL);
-	other_profiles_labels_list.clear();
 	currently_displayed_other_users.clear();
+	other_profiles_labels_list.clear();
+	edit_buttons.clear();
+	delete_buttons.clear();
 	if (delimiter != "")
 	{
 		//exact match
@@ -272,11 +276,31 @@ void MainWindow::ShapeOtherUsersLabels(wxPanel* parent_panel, User::user_info us
 		"\nIncome per family member: " + wxString::Format(wxT("%.2f"),user_information.income_per_fam_member);
 	wxStaticText* profile_information = new wxStaticText(centralize_panel, wxID_ANY, other_user_information_string);
 
+
 	wxBoxSizer* profile_information_sizer = new wxBoxSizer(wxHORIZONTAL);
 	profile_information_sizer->AddSpacer(13);
 	profile_information_sizer->Add(profile_image, wxSizerFlags(20).Expand());
 	profile_information_sizer->AddStretchSpacer(5);
-	profile_information_sizer->Add(profile_information, wxSizerFlags(75).Expand());
+	if (authority_display_label->GetLabel()=="Administrator")
+	{
+		wxBitmapButton* edit_button = new wxBitmapButton(centralize_panel, wxID_ANY, edit_bitmap);
+		size_t index = edit_buttons.size();
+		edit_buttons.push_back(edit_button);
+		edit_button->Bind(wxEVT_BUTTON, [this, index](wxCommandEvent& event) {MainWindow::OnEditButtonClicked(event, index);});
+
+		wxBitmapButton* delete_button = new wxBitmapButton(centralize_panel, wxID_ANY, delete_bitmap);
+		delete_buttons.push_back(delete_button);
+		delete_button->Bind(wxEVT_BUTTON, [this, index](wxCommandEvent& event) {MainWindow::OnDeleteButtonClicked(event, index);});
+
+		profile_information_sizer->Add(profile_information, wxSizerFlags(55).Expand());
+		profile_information_sizer->AddStretchSpacer(4);
+		profile_information_sizer->Add(edit_button, wxSizerFlags(8));
+		profile_information_sizer->AddSpacer(10);
+		profile_information_sizer->Add(delete_button, wxSizerFlags(8));
+		profile_information_sizer->AddSpacer(13);
+	}
+	else
+		profile_information_sizer->Add(profile_information, wxSizerFlags(75).Expand());
 	centralize_panel->SetSizer(profile_information_sizer);
 	centralize_panel->Layout();
 
@@ -293,23 +317,16 @@ void MainWindow::BindObjects(User* user)
 {
 	themes_dropdown_box->Bind(wxEVT_COMMAND_CHOICE_SELECTED, [=](wxCommandEvent& event) {OnThemeOptionSelected(event, user);});
 	this->Bind(wxEVT_CLOSE_WINDOW, [=](wxCloseEvent& event) {MainWindow::OnClose(event, user);});
-	search_field->Bind(wxEVT_TEXT, [=](wxCommandEvent& event) {MainWindow::OnSearchFieldChanged(event, user);});
-	//Bind(wxEVT_BUTTON, &MainWindow::OnSortModeButtonClicked, this);
-	sort_order_button->Bind(wxEVT_BUTTON, [=](wxCommandEvent& event) {MainWindow::OnSortModeButtonClicked(event, user);});
-	sort_dropdown_box->Bind(wxEVT_COMMAND_CHOICE_SELECTED, [=](wxCommandEvent& event) {OnSortOptionSelected(event, user);});
-	switch (user->GetAuthority())
-	{
-	case 0:
-		break;
-	case 1:
-		break;
-	}
+	search_field->Bind(wxEVT_TEXT, [=](wxCommandEvent& event) {MainWindow::OnSearchFieldChanged(event, user->GetName());});
+	sort_order_button->Bind(wxEVT_BUTTON, &MainWindow::OnSortModeButtonClicked, this);
+	sort_dropdown_box->Bind(wxEVT_COMMAND_CHOICE_SELECTED, &MainWindow::OnSortOptionSelected, this);
+	edit_current_user_info_button->Bind(wxEVT_BUTTON, &MainWindow::OnSelfEditButtonClicked, this);
+	if (user->GetAuthority() == 1)
+		add_button->Bind(wxEVT_BUTTON, &MainWindow::OnAddButtonClicked, this);
 }
 
-//you can refactor it, come on....
-void MainWindow::PaintObjects(User* user, int theme)
+void MainWindow::PaintObjects(int theme)
 {
-	user->SetTheme(theme);
 	wxVector<wxWindow*> taskbar_children;
 	switch (theme)
 	{
@@ -353,32 +370,38 @@ void MainWindow::GetThemeIcons(int theme)
 		search_bitmap = GetAssetsImage("Assets\\theme 1\\magnifying_glass.png", { icon_size, icon_size });
 		sort_bitmap = GetAssetsImage("Assets\\theme 1\\sort_ascending.png", { icon_size, icon_size });
 		change_theme_bitmap = GetAssetsImage("Assets\\theme 1\\pointing_circles.png", { icon_size, icon_size });
+		add_bitmap = GetAssetsImage("Assets\\theme 1\\plus.png", { icon_size, icon_size });
+		delete_bitmap = GetAssetsImage("Assets\\theme 1\\trash_bin.png", { icon_size, icon_size });
 		break;
 	case 1:
 		search_bitmap = GetAssetsImage("Assets\\theme 2\\magnifying_glass.png", { icon_size, icon_size });
 		sort_bitmap = GetAssetsImage("Assets\\theme 2\\sort_ascending.png", { icon_size, icon_size });
 		change_theme_bitmap = GetAssetsImage("Assets\\theme 2\\pointing_circles.png", { icon_size, icon_size });
+		add_bitmap = GetAssetsImage("Assets\\theme 2\\plus.png", { icon_size, icon_size });
+		delete_bitmap = GetAssetsImage("Assets\\theme 2\\trash_bin.png", { icon_size, icon_size });
 		break;
 	}
+	if (!edit_bitmap.IsOk())
+		edit_bitmap = GetAssetsImage("Assets\\General\\pencil.png", { icon_size, icon_size });
 }
 
-void MainWindow::OnSearchFieldChanged(wxCommandEvent& event, User* user)
+void MainWindow::OnSearchFieldChanged(wxCommandEvent& event, wxString user_name)
 {
 	wxString searched_string = search_field->GetValue();
 	for (auto other_profile_label : other_profiles_labels_list)
 		other_profile_label->Destroy();
-	PlaceOtherProfiles(user->GetName(), searched_string);
+	PlaceOtherProfiles(user_name, searched_string);
 	all_objects.clear();
 	App::GetAllChildren(this, all_objects);
-	PaintObjects(user, themes_dropdown_box->GetSelection());
+	PaintObjects(themes_dropdown_box->GetSelection());
 }
 
-void MainWindow::OnSortOptionSelected(wxCommandEvent& event, User* user)
+void MainWindow::OnSortOptionSelected(wxCommandEvent& event)
 {
-	Sort(sort_dropdown_box->GetSelection(), user);
+	Sort(sort_dropdown_box->GetSelection());
 }
 
-void MainWindow::OnSortModeButtonClicked(wxCommandEvent& event, User* user)
+void MainWindow::OnSortModeButtonClicked(wxCommandEvent& event)
 {
 	if (ascending)
 	{
@@ -410,29 +433,98 @@ void MainWindow::OnSortModeButtonClicked(wxCommandEvent& event, User* user)
 	sort_order_button->Refresh();
 	sort_order_button->Update();
 	if (sort_dropdown_box->GetSelection() != wxNOT_FOUND)
-		Sort(sort_dropdown_box->GetSelection(), user);
+		Sort(sort_dropdown_box->GetSelection());
 }
 
 void MainWindow::OnThemeOptionSelected(wxCommandEvent& event, User* user)
 {
 	int current_theme = themes_dropdown_box->GetSelection();
 	if (current_theme != user->GetTheme())
-		PaintObjects(user, current_theme);
+	{
+		GetThemeIcons(current_theme);
+		themes_image->SetBitmap(change_theme_bitmap);
+		sort_order_button->SetBitmapLabel(sort_bitmap);
+		search_image->SetBitmap(search_bitmap);
+
+		PaintObjects(current_theme);
+		user->SetTheme(current_theme);
+	}
+}
+
+void MainWindow::OnSelfEditButtonClicked(wxCommandEvent& event)
+{
+	wxString message = "I can edit my own account";
+	wxLogMessage(message);
+}
+
+void MainWindow::OnEditButtonClicked(wxCommandEvent& event, size_t user_number)
+{
+	wxString message = "I can edit " + currently_displayed_other_users[user_number].name;
+	wxLogMessage(message);
+}
+
+void MainWindow::OnDeleteButtonClicked(wxCommandEvent& event, size_t user_number)
+{
+	wxMessageDialog dialog(NULL, "Are you sure you want to delete " + currently_displayed_other_users[user_number].name, "Confirm action", wxYES_NO | wxICON_WARNING | wxCENTRE);
+	if (dialog.ShowModal() == wxID_YES) 
+	{
+		other_profiles_labels_list[user_number]->Destroy();
+		other_profiles_labels_list.erase(other_profiles_labels_list.begin() + user_number);
+
+		User::users.erase(std::remove_if(User::users.begin(), User::users.end(), 
+			[&](const User::user_info& element)
+			{
+				return element.name == currently_displayed_other_users[user_number].name;
+			}),
+			User::users.end());
+		User::DeleteUser(currently_displayed_other_users[user_number]);
+		currently_displayed_other_users.erase(currently_displayed_other_users.begin() + user_number);
+		delete_buttons.erase(delete_buttons.begin() + user_number);
+		edit_buttons.erase(edit_buttons.begin() + user_number);
+		Sort(sort_dropdown_box->GetSelection());
+	}
+}
+
+void MainWindow::OnAddButtonClicked(wxCommandEvent& event)
+{
+	wxString new_user_name = "Nameless";
+	User* new_user = new User(new_user_name.ToStdString(), "", 0);
+	User::user_info new_user_info = {
+		.name = new_user_name.ToStdString(),
+		.incrypted_password = "", 
+		.participation_in_soc_activities = "None",
+		.authority = 0,
+		.number = "",
+		.gpa = 0,
+		.income_per_fam_member = 0,
+		.theme = 0
+	};
+	new_user->SaveUserInfo();
+
+	if (new_user_name.MakeLower().Find(search_field->GetValue()) != wxNOT_FOUND)
+		currently_displayed_other_users.push_back(new_user_info);
+	Sort(sort_dropdown_box->GetSelection());
+	wxString message = "I need to edit this new account";
+	wxLogMessage(message);
+	wxLogMessage(wxT("New account added"));
 }
 
 void MainWindow::OnClose(wxCloseEvent& event, User* user)
 {
+	user->SetTheme(themes_dropdown_box->GetSelection());
 	user->SaveUserInfo();
 	event.Skip();
 }
 
-void MainWindow::Sort(int subject, User* user)
+void MainWindow::Sort(int subject)
 {
 	for (auto other_profile_label : other_profiles_labels_list)
 		other_profile_label->Destroy();
 	other_profiles_labels_list.clear();
-
-	User::Sort(currently_displayed_other_users, subject, ascending);
+	edit_buttons.clear();
+	delete_buttons.clear();
+	//sorting gotta be inverted cz I display labels top-to-bottom
+	User::Sort(currently_displayed_other_users, subject, !ascending);
 	wxBoxSizer* other_users_sizer = new wxBoxSizer(wxVERTICAL);
 	for (User::user_info other_user : currently_displayed_other_users)
 	{
@@ -446,5 +538,14 @@ void MainWindow::Sort(int subject, User* user)
 	other_profiles_scroll_panel->Layout();
 	all_objects.clear();
 	App::GetAllChildren(this, all_objects);
-	PaintObjects(user, themes_dropdown_box->GetSelection());
+	PaintObjects(themes_dropdown_box->GetSelection());
+}
+
+void MainWindow::OpenEditWindow(User::user_info user)
+{
+	EditWindow* edit_window = new EditWindow(user, user.authority);
+	edit_window->SetMinSize(wxSize(MainWindowWidth * 0.5, MainWindowHeight * 0.5));
+	edit_window->SetClientSize(MainWindowWidth * 0.5, MainWindowHeight * 0.5);
+	edit_window->Center();
+	edit_window->Show();
 }

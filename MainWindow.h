@@ -40,7 +40,9 @@ private:
 
 	wxStaticBitmap* profile_picture;
 
+	wxBitmapButton* edit_current_user_info_button;
 	wxBitmapButton* sort_order_button;
+	wxBitmapButton* add_button;
 
 	//images
 	wxStaticBitmap* search_image;
@@ -50,6 +52,7 @@ private:
 	wxBitmap change_theme_bitmap;
 	wxBitmap add_bitmap;
 	wxBitmap delete_bitmap;
+	wxBitmap edit_bitmap;
 
 	//lists
 	//wxArrayString working_with_acounts_admin_list = {"View", "Add", "Edit", "Delete"};
@@ -59,11 +62,13 @@ private:
 	wxArrayString sort_options_list = {"Sort By Grade Point Average", "Sort By Income Per Family Member"};
 	//-----------
 	wxVector<wxPanel*> other_profiles_labels_list;
+	wxVector<wxBitmapButton*> delete_buttons;
+	wxVector<wxBitmapButton*> edit_buttons;
 
 	//initialization and placement
 	void InitializeObjects(User* user);
 	void PlaceObjects(User* user);
-	void PlaceOtherProfiles(wxString curren_user_name, wxString delimiter);
+	void PlaceOtherProfiles(wxString current_user_name, wxString delimiter);
 
 	//idk how to call it '_' arrrrgh
 	wxImage GetProfileImage(wxString user_name, wxSize size);
@@ -75,13 +80,18 @@ private:
 	void BindObjects(User* user);
 
 	//action logic
-	void OnSearchFieldChanged(wxCommandEvent& event, User* user);
-	void OnSortOptionSelected(wxCommandEvent& event, User* user);
-	void OnSortModeButtonClicked(wxCommandEvent& event, User* user);
+	void OnSearchFieldChanged(wxCommandEvent& event, wxString user_name);
+	void OnSortOptionSelected(wxCommandEvent& event);
+	void OnSortModeButtonClicked(wxCommandEvent& event);
 	void OnThemeOptionSelected(wxCommandEvent& event, User* user);
+	void OnSelfEditButtonClicked(wxCommandEvent& event);
+	void OnEditButtonClicked(wxCommandEvent& event, size_t user_number);
+	void OnDeleteButtonClicked(wxCommandEvent& event, size_t user_number);
+	void OnAddButtonClicked(wxCommandEvent& event);
 	void OnClose(wxCloseEvent& event, User* user);
 	//---
-	void PaintObjects(User* user, int theme);
+	void PaintObjects(int theme);
 	void GetThemeIcons(int theme);
-	void Sort(int subject, User* user);
+	void Sort(int subject);
+	void OpenEditWindow(User::user_info user);
 };
