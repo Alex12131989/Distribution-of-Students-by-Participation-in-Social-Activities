@@ -40,12 +40,14 @@ public:
 
 	void SaveUserInfo();
 	void FindUser();
+	void ReloadUser();
 	void AddNewUser();
 	static void DeleteUser(user_info user_to_delete);
 	static void CreateAdminZero();
 
 	static void Sort(std::vector<User::user_info>& users, int subject, bool ascending);
 	std::string GetName();
+	std::string GetPassword();
 	std::string GetParticipation();
 	std::string GetNumber();
 	int GetAuthority();
@@ -53,12 +55,18 @@ public:
 	float GetIncomePerFamMember();
 	int GetTheme();
 
+	void SetName(std::string name);
+	void SetPassword(std::string password);
+	void SetAuthority(int authority);
 	void SetParticipation(std::string participation);
 	void SetNumber(std::string number);
 	void SetGPA(float gpa);
 	void SetIncomePerFamMember(float income);
 	void SetTheme(int theme);
+
 	void SetMaxGPA(int max_gpa);
+
+	static std::string ApplyCipher(std::string password, std::string name, int option);
 
 private:
 	//BT/BST
@@ -90,7 +98,6 @@ private:
 	static const std::streamsize CHUNK = 64;
 
 	void GetAllUserInfos();
-	std::string ApplyCipher(std::string password, std::string name, int option);
 	static void WriteSingleUserToFile(std::ofstream& file, user_info data);
 	static bool ReadSingleUserToFile(std::ifstream& file, user_info& user);
 };

@@ -6,14 +6,15 @@
 
 MainWindow::MainWindow(const wxString& title, User* user) : wxFrame(nullptr, wxID_ANY, title)
 {
-	InitializeObjects(user);
-	BindObjects(user);
-	PlaceObjects(user);
+	this->user = user;
+	InitializeObjects();
+	BindObjects();
+	PlaceObjects();
 	App::GetAllChildren(this, all_objects);
 	PaintObjects(user->GetTheme());
 }
 
-void MainWindow::InitializeObjects(User* user)
+void MainWindow::InitializeObjects()
 {
 	GetThemeIcons(user->GetTheme());
 	panel = new wxPanel(this);
@@ -38,7 +39,6 @@ void MainWindow::InitializeObjects(User* user)
 	sort_dropdown_box = new wxChoice(sort_panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, sort_options_list);
 	sort_order_button = new wxBitmapButton(sort_panel, wxID_ANY, sort_bitmap);
 
-	add_button = new wxBitmapButton(taskbar_centralize_panel, wxID_ANY, add_bitmap);
 
 	authority_display_panel = new wxPanel(taskbar_centralize_panel, wxID_ANY);
 
@@ -68,11 +68,12 @@ void MainWindow::InitializeObjects(User* user)
 		break;
 	case 1:
 		authority_display_label->SetLabelText("Administrator");
+		add_button = new wxBitmapButton(taskbar_centralize_panel, wxID_ANY, add_bitmap);
 		break;
 	}
 }
 
-void MainWindow::PlaceObjects(User* user)
+void MainWindow::PlaceObjects()
 {
 	wxBoxSizer* search_sizer = new wxBoxSizer(wxHORIZONTAL);
 	search_sizer->Add(search_field, wxSizerFlags().Expand());
@@ -180,7 +181,7 @@ void MainWindow::PlaceOtherProfiles(wxString current_user_name, wxString delimit
 	{
 		//exact match
 		for (User::user_info other_user : User::users)
-			if (other_user.name == delimiter &&other_user.name != current_user_name)
+			if (other_user.name == delimiter &&other_user.name != current_user_name && other_user.name != "Root Account")
 			{
 				currently_displayed_other_users.push_back(other_user);
 				auto other_user_panel = new wxPanel(other_profiles_scroll_panel, wxID_ANY);
@@ -194,7 +195,7 @@ void MainWindow::PlaceOtherProfiles(wxString current_user_name, wxString delimit
 		for (User::user_info other_user : User::users)
 		{
 			wxString other_user_name = other_user.name;
-			if (other_user_name.MakeLower().Find(delimiter) != wxNOT_FOUND && other_user.name != current_user_name)
+			if (other_user_name.MakeLower().Find(delimiter) != wxNOT_FOUND && other_user.name != current_user_name && other_user.name != "Root Account")
 			{
 				currently_displayed_other_users.push_back(other_user);
 				auto other_user_panel = new wxPanel(other_profiles_scroll_panel, wxID_ANY);
@@ -208,7 +209,7 @@ void MainWindow::PlaceOtherProfiles(wxString current_user_name, wxString delimit
 	else
 		//all users(except for current)
 		for (User::user_info other_user : User::users)
-			if (other_user.name != current_user_name)
+			if (other_user.name != current_user_name && other_user.name != "Root Account")
 			{
 				currently_displayed_other_users.push_back(other_user);
 				auto other_user_panel = new wxPanel(other_profiles_scroll_panel, wxID_ANY);
@@ -313,10 +314,10 @@ void MainWindow::ShapeOtherUsersLabels(wxPanel* parent_panel, User::user_info us
 
 }
 
-void MainWindow::BindObjects(User* user)
+void MainWindow::BindObjects()
 {
-	themes_dropdown_box->Bind(wxEVT_COMMAND_CHOICE_SELECTED, [=](wxCommandEvent& event) {OnThemeOptionSelected(event, user);});
-	this->Bind(wxEVT_CLOSE_WINDOW, [=](wxCloseEvent& event) {MainWindow::OnClose(event, user);});
+	themes_dropdown_box->Bind(wxEVT_COMMAND_CHOICE_SELECTED, &MainWindow::OnThemeOptionSelected, this);
+	this->Bind(wxEVT_CLOSE_WINDOW, &MainWindow::OnClose, this);
 	search_field->Bind(wxEVT_TEXT, [=](wxCommandEvent& event) {MainWindow::OnSearchFieldChanged(event, user->GetName());});
 	sort_order_button->Bind(wxEVT_BUTTON, &MainWindow::OnSortModeButtonClicked, this);
 	sort_dropdown_box->Bind(wxEVT_COMMAND_CHOICE_SELECTED, &MainWindow::OnSortOptionSelected, this);
@@ -387,7 +388,7 @@ void MainWindow::GetThemeIcons(int theme)
 
 void MainWindow::OnSearchFieldChanged(wxCommandEvent& event, wxString user_name)
 {
-	wxString searched_string = search_field->GetValue();
+	wxString searched_string = search_field->GetValue().Lower();
 	for (auto other_profile_label : other_profiles_labels_list)
 		other_profile_label->Destroy();
 	PlaceOtherProfiles(user_name, searched_string);
@@ -436,7 +437,7 @@ void MainWindow::OnSortModeButtonClicked(wxCommandEvent& event)
 		Sort(sort_dropdown_box->GetSelection());
 }
 
-void MainWindow::OnThemeOptionSelected(wxCommandEvent& event, User* user)
+void MainWindow::OnThemeOptionSelected(wxCommandEvent& event)
 {
 	int current_theme = themes_dropdown_box->GetSelection();
 	if (current_theme != user->GetTheme())
@@ -453,14 +454,16 @@ void MainWindow::OnThemeOptionSelected(wxCommandEvent& event, User* user)
 
 void MainWindow::OnSelfEditButtonClicked(wxCommandEvent& event)
 {
-	wxString message = "I can edit my own account";
-	wxLogMessage(message);
+	User::user_info user_fields = { .name = user->GetName(), .incrypted_password = User::ApplyCipher(user->GetPassword(), user->GetName(), 0),
+				.participation_in_soc_activities = user->GetParticipation(),  .authority = user->GetAuthority(),
+				.number = user->GetNumber(), .gpa = user->GetGPA(), .income_per_fam_member = user->GetIncomePerFamMember(), .theme = user->GetTheme() };
+	OpenEditWindow(user_fields, user->GetAuthority(), true);
 }
 
 void MainWindow::OnEditButtonClicked(wxCommandEvent& event, size_t user_number)
 {
-	wxString message = "I can edit " + currently_displayed_other_users[user_number].name;
-	wxLogMessage(message);
+	if (authority_display_label->GetLabel() == "Administrator")
+		OpenEditWindow(currently_displayed_other_users[user_number], 1, false);
 }
 
 void MainWindow::OnDeleteButtonClicked(wxCommandEvent& event, size_t user_number)
@@ -487,10 +490,8 @@ void MainWindow::OnDeleteButtonClicked(wxCommandEvent& event, size_t user_number
 
 void MainWindow::OnAddButtonClicked(wxCommandEvent& event)
 {
-	wxString new_user_name = "Nameless";
-	User* new_user = new User(new_user_name.ToStdString(), "", 0);
 	User::user_info new_user_info = {
-		.name = new_user_name.ToStdString(),
+		.name = "Nameless",
 		.incrypted_password = "", 
 		.participation_in_soc_activities = "None",
 		.authority = 0,
@@ -499,17 +500,13 @@ void MainWindow::OnAddButtonClicked(wxCommandEvent& event)
 		.income_per_fam_member = 0,
 		.theme = 0
 	};
-	new_user->SaveUserInfo();
 
-	if (new_user_name.MakeLower().Find(search_field->GetValue()) != wxNOT_FOUND)
-		currently_displayed_other_users.push_back(new_user_info);
-	Sort(sort_dropdown_box->GetSelection());
-	wxString message = "I need to edit this new account";
-	wxLogMessage(message);
+	if (authority_display_label->GetLabel() == "Administrator")
+		OpenEditWindow(new_user_info, 1, false);
 	wxLogMessage(wxT("New account added"));
 }
 
-void MainWindow::OnClose(wxCloseEvent& event, User* user)
+void MainWindow::OnClose(wxCloseEvent& event)
 {
 	user->SetTheme(themes_dropdown_box->GetSelection());
 	user->SaveUserInfo();
@@ -541,11 +538,44 @@ void MainWindow::Sort(int subject)
 	PaintObjects(themes_dropdown_box->GetSelection());
 }
 
-void MainWindow::OpenEditWindow(User::user_info user)
+void MainWindow::OpenEditWindow(User::user_info user, bool caller_authority, bool self_edition)
 {
-	EditWindow* edit_window = new EditWindow(user, user.authority);
-	edit_window->SetMinSize(wxSize(MainWindowWidth * 0.5, MainWindowHeight * 0.5));
-	edit_window->SetClientSize(MainWindowWidth * 0.5, MainWindowHeight * 0.5);
+	EditWindow* edit_window = new EditWindow(user, caller_authority, self_edition);
 	edit_window->Center();
 	edit_window->Show();
+
+	//not to display unedited user right away
+	MSG msg;
+	while (edit_window->IsShown())
+	{
+		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			TranslateMessage(&msg);//to allow to type stuff
+			DispatchMessage(&msg);//to allow process the window (interaction, drawing in the first place, etc.)
+		}
+		else
+			Sleep(100);
+	}
+
+	if (self_edition)
+	{
+		this->user->ReloadUser();
+		wxString user_information_string =
+			"Name: " + this->user->GetName() +
+			"\nParticipation in social events: " + this->user->GetParticipation() +
+			"\nNumber: " + this->user->GetNumber() +
+			"\nGrade point average: " + wxString::Format(wxT("%.2f"), this->user->GetGPA()) +
+			"\nIncome per family member: " + wxString::Format(wxT("%.2f"), this->user->GetIncomePerFamMember());
+		current_user_info_label->SetLabel(user_information_string);
+	}
+	else
+	{
+		for (auto oprofile : other_profiles_labels_list)
+			oprofile->Destroy();
+		PlaceOtherProfiles(this->user->GetName(), search_field->GetValue());
+
+		all_objects.clear();
+		App::GetAllChildren(this, all_objects);
+		PaintObjects(this->user->GetTheme());
+	}
 }

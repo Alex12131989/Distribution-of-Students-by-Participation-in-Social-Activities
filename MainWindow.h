@@ -4,6 +4,7 @@
 #include <wx/string.h>
 #include <wx/image.h>
 #include <wx/wx.h>
+
 #include "User.h"
 
 class MainWindow : public wxFrame
@@ -15,6 +16,7 @@ private:
 	//variables
 	int icon_size = 20;
 	bool ascending = true;
+	User* user;
 
 	//objects
 	wxPanel* panel;
@@ -65,9 +67,10 @@ private:
 	wxVector<wxBitmapButton*> delete_buttons;
 	wxVector<wxBitmapButton*> edit_buttons;
 
+
 	//initialization and placement
-	void InitializeObjects(User* user);
-	void PlaceObjects(User* user);
+	void InitializeObjects();
+	void PlaceObjects();
 	void PlaceOtherProfiles(wxString current_user_name, wxString delimiter);
 
 	//idk how to call it '_' arrrrgh
@@ -77,21 +80,21 @@ private:
 	void ShapeOtherUsersLabels(wxPanel* parent_panel, User::user_info user_information);
 
 	//actions
-	void BindObjects(User* user);
+	void BindObjects();
 
 	//action logic
 	void OnSearchFieldChanged(wxCommandEvent& event, wxString user_name);
 	void OnSortOptionSelected(wxCommandEvent& event);
 	void OnSortModeButtonClicked(wxCommandEvent& event);
-	void OnThemeOptionSelected(wxCommandEvent& event, User* user);
+	void OnThemeOptionSelected(wxCommandEvent& event);
 	void OnSelfEditButtonClicked(wxCommandEvent& event);
 	void OnEditButtonClicked(wxCommandEvent& event, size_t user_number);
 	void OnDeleteButtonClicked(wxCommandEvent& event, size_t user_number);
 	void OnAddButtonClicked(wxCommandEvent& event);
-	void OnClose(wxCloseEvent& event, User* user);
+	void OnClose(wxCloseEvent& event);
 	//---
 	void PaintObjects(int theme);
 	void GetThemeIcons(int theme);
 	void Sort(int subject);
-	void OpenEditWindow(User::user_info user);
+	void OpenEditWindow(User::user_info user, bool caller_authority, bool self_edition);
 };

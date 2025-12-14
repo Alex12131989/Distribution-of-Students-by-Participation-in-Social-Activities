@@ -89,8 +89,12 @@ std::vector<User::user_info> User::RepresentBTAsVector(Node* root)
 void User::CreateAdminZero()
 {
 	//this code would be given to the customer, and potentially be changed for every new copy
-	auto admin_zero = new User("Root Account", "kldjflksjljkjdshnklhcdykjdhb", 0);
-	admin_zero->SaveUserInfo();
+	auto admin_zero = new User("Root Account", "", 0);
+	try
+	{
+		admin_zero->AddNewUser();
+	}
+	catch (Exception exception) {	/*only if someone ran this app already*/ }
 }
 
 void User::WriteSingleUserToFile(std::ofstream& file, user_info data)
@@ -228,6 +232,27 @@ void User::FindUser()
 		throw Exception("Wrong password");
 }
 
+void User::ReloadUser()
+{
+	bool found = false;
+	for (size_t i = 0; i < users.size(); ++i)
+		if (users[i].name == name)
+		{
+			found = true;
+			authority = users[i].authority;
+			std::string pulled_password = ApplyCipher(users[i].incrypted_password, users[i].name, 1);
+			password = pulled_password;
+			number = users[i].number;
+			income_per_fam_member = users[i].income_per_fam_member;
+			gpa = users[i].gpa;
+			participation_in_soc_activities = users[i].participation_in_soc_activities;
+			theme = users[i].theme;
+			i = users.size();
+		}
+	if (!found)
+		throw Exception("Could not find the user");
+}
+
 void User::AddNewUser()
 {
 	for (user_info user : users)
@@ -332,6 +357,11 @@ std::string User::GetName()
 	return name;
 }
 
+std::string User::GetPassword()
+{
+	return password;
+}
+
 std::string User::GetParticipation()
 {
 	return participation_in_soc_activities;
@@ -362,6 +392,28 @@ int User::GetTheme()
 	return theme;
 }
 
+void User::SetName(std::string name)
+{
+	std::string characters_allowed = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ. ";
+	if (name.find_first_not_of(characters_allowed) != std::string::npos)
+		throw Exception("Not allowed character in name");
+	this->name = name;
+}
+
+void User::SetPassword(std::string new_password)
+{
+	std::string characters_allowed = alphabet;
+	if (new_password.find_first_not_of(characters_allowed) != std::string::npos)
+		throw Exception("Not allowed character in password");
+	password = new_password;
+	SaveUserInfo();
+}
+
+void User::SetAuthority(int authority)
+{
+	this->authority = authority;
+}
+
 void User::SetParticipation(std::string participation)
 {
 	if (participation == "None" || participation == "Low" || participation == "Medium" || participation == "High")
@@ -372,6 +424,8 @@ void User::SetParticipation(std::string participation)
 
 void User::SetNumber(std::string number)
 {
+	if (number.find_first_not_of("0123456789+") != std::string::npos)
+		throw Exception("Wrong value");
 	this->number = number;
 }
 
