@@ -55,6 +55,16 @@ void EditWindow::InitializeObjects(User::user_info user, bool unlimited_power, b
 
 	confirm_button = new wxButton(panel, wxID_ANY, "Confirm");
 	save_button = new wxButton(panel, wxID_ANY, "Save");
+
+	wxImage save_image;
+	wxString working_path = wxGetCwd();
+	working_path += "\\Assets\\General\\save file.png";
+	if (!save_image.LoadFile(working_path, wxBITMAP_TYPE_PNG))
+		save_image = wxNullImage;
+	save_image = save_image.Scale({ 25, 25 }, wxIMAGE_QUALITY_HIGH);
+	wxBitmap save_bitmap(save_image);
+	save_button->SetBitmap(save_bitmap);
+	save_button->SetBitmapPosition(wxRIGHT);
 }
 
 void EditWindow::PlaceObjects(bool unlimited_power, bool self_edition)
@@ -245,7 +255,6 @@ bool EditWindow::Save()
 			if (pre_changed_name == name_field->GetValue())
 			{
 				currently_editing_user->SaveUserInfo();
-				pre_changed_name = currently_editing_user->GetName();
 			}
 			else
 			{
@@ -262,6 +271,7 @@ bool EditWindow::Save()
 				};
 				User::DeleteUser(old_user);
 			}
+			pre_changed_name = currently_editing_user->GetName();
 		}
 	}
 	catch (Exception& exception)

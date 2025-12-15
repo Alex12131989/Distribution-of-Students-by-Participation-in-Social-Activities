@@ -45,6 +45,7 @@ private:
 	wxBitmapButton* edit_current_user_info_button;
 	wxBitmapButton* sort_order_button;
 	wxBitmapButton* add_button;
+	wxBitmapButton* view_button;	//ive no idea what to call that (since it does that only for first 5 people)
 
 	//images
 	wxStaticBitmap* search_image;
@@ -55,6 +56,7 @@ private:
 	wxBitmap add_bitmap;
 	wxBitmap delete_bitmap;
 	wxBitmap edit_bitmap;
+	wxBitmap view_bitmap;
 
 	//lists
 	//wxArrayString working_with_acounts_admin_list = {"View", "Add", "Edit", "Delete"};
@@ -91,6 +93,7 @@ private:
 	void OnEditButtonClicked(wxCommandEvent& event, size_t user_number);
 	void OnDeleteButtonClicked(wxCommandEvent& event, size_t user_number);
 	void OnAddButtonClicked(wxCommandEvent& event);
+	void OnViewButtonClicked(wxCommandEvent& event);
 	void OnClose(wxCloseEvent& event);
 	//---
 	void PaintObjects(int theme);

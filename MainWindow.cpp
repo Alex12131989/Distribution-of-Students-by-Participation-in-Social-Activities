@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 #include "EditWindow.h"
 #include "Exception.h"
+#include "detector.h"
 #include "User.h"
 #include "App.h"
 
@@ -39,6 +40,7 @@ void MainWindow::InitializeObjects()
 	sort_dropdown_box = new wxChoice(sort_panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, sort_options_list);
 	sort_order_button = new wxBitmapButton(sort_panel, wxID_ANY, sort_bitmap);
 
+	view_button = new wxBitmapButton(taskbar_centralize_panel, wxID_ANY, view_bitmap);
 
 	authority_display_panel = new wxPanel(taskbar_centralize_panel, wxID_ANY);
 
@@ -105,7 +107,9 @@ void MainWindow::PlaceObjects()
 	{
 		taskbar_centralize_sizer->AddSpacer(22);
 		taskbar_centralize_sizer->Add(add_button, wxSizerFlags().Expand());
+		taskbar_centralize_sizer->AddSpacer(22);
 	}
+	taskbar_centralize_sizer->Add(view_button, wxSizerFlags().Expand());
 	taskbar_centralize_sizer->AddStretchSpacer();
 	taskbar_centralize_sizer->Add(sort_panel, wxSizerFlags().Expand());
 	taskbar_centralize_sizer->AddSpacer(20);
@@ -322,6 +326,7 @@ void MainWindow::BindObjects()
 	sort_order_button->Bind(wxEVT_BUTTON, &MainWindow::OnSortModeButtonClicked, this);
 	sort_dropdown_box->Bind(wxEVT_COMMAND_CHOICE_SELECTED, &MainWindow::OnSortOptionSelected, this);
 	edit_current_user_info_button->Bind(wxEVT_BUTTON, &MainWindow::OnSelfEditButtonClicked, this);
+	view_button->Bind(wxEVT_BUTTON, &MainWindow::OnViewButtonClicked, this);
 	if (user->GetAuthority() == 1)
 		add_button->Bind(wxEVT_BUTTON, &MainWindow::OnAddButtonClicked, this);
 }
@@ -373,6 +378,7 @@ void MainWindow::GetThemeIcons(int theme)
 		change_theme_bitmap = GetAssetsImage("Assets\\theme 1\\pointing_circles.png", { icon_size, icon_size });
 		add_bitmap = GetAssetsImage("Assets\\theme 1\\plus.png", { icon_size, icon_size });
 		delete_bitmap = GetAssetsImage("Assets\\theme 1\\trash_bin.png", { icon_size, icon_size });
+		view_bitmap = GetAssetsImage("Assets\\theme 1\\eye.png", { icon_size, icon_size });
 		break;
 	case 1:
 		search_bitmap = GetAssetsImage("Assets\\theme 2\\magnifying_glass.png", { icon_size, icon_size });
@@ -380,6 +386,7 @@ void MainWindow::GetThemeIcons(int theme)
 		change_theme_bitmap = GetAssetsImage("Assets\\theme 2\\pointing_circles.png", { icon_size, icon_size });
 		add_bitmap = GetAssetsImage("Assets\\theme 2\\plus.png", { icon_size, icon_size });
 		delete_bitmap = GetAssetsImage("Assets\\theme 2\\trash_bin.png", { icon_size, icon_size });
+		view_bitmap = GetAssetsImage("Assets\\theme 2\\eye.png", { icon_size, icon_size });
 		break;
 	}
 	if (!edit_bitmap.IsOk())
@@ -504,6 +511,69 @@ void MainWindow::OnAddButtonClicked(wxCommandEvent& event)
 	if (authority_display_label->GetLabel() == "Administrator")
 		OpenEditWindow(new_user_info, 1, false);
 	wxLogMessage(wxT("New account added"));
+}
+
+void MainWindow::OnViewButtonClicked(wxCommandEvent& event)
+{
+	float* gpas = new float[currently_displayed_other_users.size()];
+	for (size_t i = 0; i < currently_displayed_other_users.size(); ++i)
+		gpas[i] = currently_displayed_other_users[i].gpa;
+
+	float* incomes = new float[currently_displayed_other_users.size()];
+	for (size_t i = 0; i < currently_displayed_other_users.size(); ++i)
+		incomes[i] = currently_displayed_other_users[i].income_per_fam_member;
+
+	int64_t* activity = new int64_t[currently_displayed_other_users.size()];
+	for (size_t i = 0; i < currently_displayed_other_users.size(); ++i)
+	{
+		if (currently_displayed_other_users[i].participation_in_soc_activities == "None")
+			activity[i] = 0;
+		else if (currently_displayed_other_users[i].participation_in_soc_activities == "Low")
+			activity[i] = 1;
+		else if (currently_displayed_other_users[i].participation_in_soc_activities == "Medium")
+			activity[i] = 2;
+		else if (currently_displayed_other_users[i].participation_in_soc_activities == "High")
+			activity[i] = 3;
+		else
+			activity[i] = 0;
+	}
+
+	int64_t* new_other_users_to_display = DetectBelowAverageUsers(gpas, incomes, activity, currently_displayed_other_users.size());
+
+	for (auto other_profile_label : other_profiles_labels_list)
+		other_profile_label->Destroy();
+	other_profiles_labels_list.clear();
+	edit_buttons.clear();
+	delete_buttons.clear();
+
+	wxBoxSizer* other_users_sizer = new wxBoxSizer(wxVERTICAL);
+	//5 users to display (according to the task)
+	size_t newly_displayed = 0;
+	try
+	{
+		for (size_t i = 0; i < 5; ++i)
+			if (i < currently_displayed_other_users.size())
+			{
+				auto other_user_panel = new wxPanel(other_profiles_scroll_panel, wxID_ANY);
+				other_profiles_labels_list.push_back(other_user_panel);
+				ShapeOtherUsersLabels(other_user_panel, currently_displayed_other_users.at(new_other_users_to_display[i]));
+				currently_displayed_other_users.push_back(currently_displayed_other_users.at(new_other_users_to_display[i]));
+				++newly_displayed;
+				other_users_sizer->Add(other_user_panel, wxSizerFlags().Expand());
+				other_users_sizer->AddSpacer(20);
+			}
+	}
+	catch (std::out_of_range)
+	{
+		//in case there were less than 5 'below' average folks
+	}
+	other_profiles_scroll_panel->SetSizer(other_users_sizer);
+	other_profiles_scroll_panel->Layout();
+	all_objects.clear();
+	App::GetAllChildren(this, all_objects);
+	PaintObjects(themes_dropdown_box->GetSelection());
+	currently_displayed_other_users.erase(currently_displayed_other_users.begin(), currently_displayed_other_users.end() - newly_displayed);
+	FreeMemory(new_other_users_to_display);
 }
 
 void MainWindow::OnClose(wxCloseEvent& event)
