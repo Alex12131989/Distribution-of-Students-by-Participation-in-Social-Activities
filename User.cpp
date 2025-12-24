@@ -72,6 +72,8 @@ std::vector<User::user_info> User::RepresentBTAsVector(Node* root)
 	std::vector<user_info> return_vector;
 	if (root != nullptr)
 		return_vector.push_back(root->data);
+	else
+		return return_vector;
 
 	if (root->left != nullptr)
 	{
@@ -124,7 +126,7 @@ void User::WriteSingleUserToFile(std::ofstream& file, user_info data)
 	file.write(reinterpret_cast<const char*>(&NEXT_LINE_SYMBOL), sizeof(NEXT_LINE_SYMBOL));
 }
 
-bool User::ReadSingleUserToFile(std::ifstream& file, user_info& user)
+bool User::ReadSingleUserFromFile(std::ifstream& file, user_info& user)
 {
 	char buffer = '\0';
 
@@ -286,12 +288,17 @@ void User::GetAllUserInfos()
 	working_path /= "Users";
 	create_directory(working_path);
 	working_path /= "user_info.bin";
-	std::ifstream working_file(working_path, std::ios::binary);
+	std::ifstream working_file = std::ifstream(working_path, std::ios::binary);
+	if (!working_file.is_open())
+	{
+		std::ofstream create_file(working_path, std::ios::out);
+		working_file = std::ifstream(working_path, std::ios::binary);
+	}
 
 	user_info user;
 	UnitializeBT(root);
 	root = nullptr;
-	while (ReadSingleUserToFile(working_file, user))
+	while (ReadSingleUserFromFile(working_file, user))
 	{
 		root = Insert(root, user);
 		user = {};
@@ -454,7 +461,7 @@ void User::SetTheme(int theme)
 
 void User::SetMaxGPA(int max_gpa)
 {
-	if (max_gpa >= 4)
+	if (max_gpa > 0)
 		MAX_GPA = max_gpa;
 	else
 		throw Exception("Wrong value");

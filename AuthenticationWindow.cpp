@@ -7,6 +7,11 @@
 
 AuthenticationWindow::AuthenticationWindow(const wxString& title) : wxFrame(nullptr, wxID_ANY, title)
 {
+	std::experimental::filesystem::path icon_path = std::experimental::filesystem::current_path();
+	icon_path /= "Assets/General/icon.ico";
+	wxIcon icon(wxString(icon_path), wxBITMAP_TYPE_ICO);
+	SetIcon(icon);
+
 	InitializeObjects();
 	PlaceObjects();
 	BindObjects();
@@ -129,7 +134,7 @@ void AuthenticationWindow::OnConfirmButtonClicked(wxCommandEvent& event)
 		{
 			user->AddNewUser();
 			OpenMainWindow(user);
-			wxMessageBox(wxT("New account was created"), wxT("Congrats"), wxICON_INFORMATION);
+			wxMessageBox(wxT("New account was created"), wxT("Welcome!"), wxICON_INFORMATION);
 		}
 	}
 	catch (Exception& exception)

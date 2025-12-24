@@ -4,6 +4,14 @@
 
 EditWindow::EditWindow(User::user_info user, bool unlimited_power, bool self_edition) : wxFrame(nullptr, wxID_ANY,  wxString::FromUTF8("Editing " + user.name))
 {
+
+	wxString icon_path = wxGetCwd();
+	icon_path += "/Assets/General/pencil.png";
+	wxBitmap pencil_png(icon_path, wxBITMAP_TYPE_PNG);
+	wxIcon icon;
+	icon.CopyFromBitmap(pencil_png);
+	SetIcon(icon);
+
 	currently_editing_user = new User(user.name, user.incrypted_password, user.theme);
 	pre_changed_name = user.name;
 	try
@@ -199,28 +207,14 @@ bool EditWindow::Save()
 		{
 			double dgpa;
 			gpa_field->GetValue().ToDouble(&dgpa);
-			try
-			{
-				currently_editing_user->SetGPA(static_cast<float>(dgpa));
-			}
-			catch (Exception exception)
-			{
-				if (exception.code == 8) wxLogError(wxT("The GPA is out of bounds"));
-			}
+			currently_editing_user->SetGPA(static_cast<float>(dgpa));
 		}
 
 		if (income_field != nullptr)
 		{
 			double dincome;
 			income_field->GetValue().ToDouble(&dincome);
-			try
-			{
-				currently_editing_user->SetIncomePerFamMember(static_cast<float>(dincome));
-			}
-			catch (Exception exception)
-			{
-				if (exception.code == 8) wxLogError(wxT("Income can't be negative"));
-			}
+			currently_editing_user->SetIncomePerFamMember(static_cast<float>(dincome));
 		}
 
 		if (authority_field != nullptr)
@@ -234,15 +228,16 @@ bool EditWindow::Save()
 		switch (exception.code)
 		{
 		case 1:
-			wxLogError(wxT("Illegal characters in name"));
+			wxLogError(wxT("Illegal characters in password"));
 			break;
 		case 2:
-			wxLogError(wxT("Illegal characters in password"));
+			wxLogError(wxT("Illegal characters in name"));
 			break;
 		case 8:
 			wxLogError(wxT("Some of the field(s) contained illegal values"));
 			break;
 		}
+		wxLog::FlushActive();
 		return false;
 	}
 

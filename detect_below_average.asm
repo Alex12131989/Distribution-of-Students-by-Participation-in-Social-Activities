@@ -142,9 +142,9 @@ DetectBelowAverageUsers ENDP
 FreeMemory PROC
 	PUSH RBX
 
-	SUB RSP, 20h
+	SUB RSP, 32
 	CALL free
-	ADD RSP, 20h
+	ADD RSP, 32
 
 	POP RBX
 	RET

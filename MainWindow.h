@@ -14,6 +14,7 @@ public:
 
 private:
 	//variables
+	bool running = false;
 	int icon_size = 20;
 	bool ascending = true;
 	User* user;

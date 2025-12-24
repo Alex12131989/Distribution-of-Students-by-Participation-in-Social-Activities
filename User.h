@@ -99,5 +99,5 @@ private:
 
 	void GetAllUserInfos();
 	static void WriteSingleUserToFile(std::ofstream& file, user_info data);
-	static bool ReadSingleUserToFile(std::ifstream& file, user_info& user);
+	static bool ReadSingleUserFromFile(std::ifstream& file, user_info& user);
 };

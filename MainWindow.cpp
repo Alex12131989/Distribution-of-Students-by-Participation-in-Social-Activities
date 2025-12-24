@@ -7,6 +7,12 @@
 
 MainWindow::MainWindow(const wxString& title, User* user) : wxFrame(nullptr, wxID_ANY, title)
 {
+	std::experimental::filesystem::path icon_path = std::experimental::filesystem::current_path();
+	icon_path /= "Assets/General/icon.ico";
+	wxIcon icon(wxString(icon_path), wxBITMAP_TYPE_ICO);
+	SetIcon(icon);
+
+	running = true;
 	this->user = user;
 	InitializeObjects();
 	BindObjects();
@@ -47,7 +53,7 @@ void MainWindow::InitializeObjects()
 	authority_display_label = new wxStaticText(authority_display_panel, wxID_ANY, "");
 
 	profile_scroll_panel = new wxScrolledWindow(current_card_panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL);
-	//profile_scroll_panel->SetMinSize(wxSize(MainWindowWidth*0.4, -1));
+	profile_scroll_panel->SetScrollRate(0, 10);
 
 	current_user_info_panel = new wxPanel(profile_scroll_panel, wxID_ANY);
 	edit_current_user_info_button = new wxBitmapButton(profile_scroll_panel, wxID_ANY, edit_bitmap);
@@ -61,7 +67,7 @@ void MainWindow::InitializeObjects()
 	current_user_info_label = new wxStaticText(current_user_info_panel, wxID_ANY, user_information_string);
 
 	other_profiles_scroll_panel = new wxScrolledWindow(current_card_panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL);
-	//other_profiles_scroll_panel->SetMinSize(wxSize(MainWindowWidth * 0.55, -1));
+	other_profiles_scroll_panel->SetScrollRate(0, 10);
 
 	switch (user->GetAuthority())
 	{
@@ -223,6 +229,7 @@ void MainWindow::PlaceOtherProfiles(wxString current_user_name, wxString delimit
 				other_users_sizer->AddSpacer(20);
 			}
 	other_profiles_scroll_panel->SetSizer(other_users_sizer);
+	other_profiles_scroll_panel->FitInside();
 	other_profiles_scroll_panel->Layout();
 }
 
@@ -364,6 +371,17 @@ void MainWindow::PaintObjects(int theme)
 	current_card_panel->SetBackgroundColour(RGB(130, 130, 130));
 	panel->SetBackgroundColour(RGB(130, 130, 130));
 	authority_display_label->SetForegroundColour(RGB(200, 35, 13));
+
+	themes_image->SetBitmap(change_theme_bitmap);
+	search_image->SetBitmap(search_bitmap);
+	sort_order_button->SetBitmap(sort_bitmap);
+	view_button->SetBitmap(view_bitmap);
+	sort_order_button->SetBitmap(sort_bitmap);
+	if (user->GetAuthority() == 1)
+		add_button->SetBitmap(add_bitmap);
+	for (auto delete_button : delete_buttons)
+		delete_button->SetBitmap(delete_bitmap);
+
 	this->Refresh();
 	this->Update();
 }
@@ -450,10 +468,6 @@ void MainWindow::OnThemeOptionSelected(wxCommandEvent& event)
 	if (current_theme != user->GetTheme())
 	{
 		GetThemeIcons(current_theme);
-		themes_image->SetBitmap(change_theme_bitmap);
-		sort_order_button->SetBitmapLabel(sort_bitmap);
-		search_image->SetBitmap(search_bitmap);
-
 		PaintObjects(current_theme);
 		user->SetTheme(current_theme);
 	}
@@ -580,6 +594,7 @@ void MainWindow::OnClose(wxCloseEvent& event)
 {
 	user->SetTheme(themes_dropdown_box->GetSelection());
 	user->SaveUserInfo();
+	running = false;
 	event.Skip();
 }
 
@@ -616,36 +631,41 @@ void MainWindow::OpenEditWindow(User::user_info user, bool caller_authority, boo
 
 	//not to display unedited user right away
 	MSG msg;
-	while (edit_window->IsShown())
+	while (edit_window->IsShown() && running)
 	{
 		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
 		{
 			TranslateMessage(&msg);//to allow to type stuff
-			DispatchMessage(&msg);//to allow process the window (interaction, drawing in the first place, etc.)
+			DispatchMessage(&msg);//to allow process the window (interaction, drawing in the first place, etc.)		
 		}
 		else
 			Sleep(100);
 	}
 
-	if (self_edition)
-	{
-		this->user->ReloadUser();
-		wxString user_information_string =
-			"Name: " + this->user->GetName() +
-			"\nParticipation in social events: " + this->user->GetParticipation() +
-			"\nNumber: " + this->user->GetNumber() +
-			"\nGrade point average: " + wxString::Format(wxT("%.2f"), this->user->GetGPA()) +
-			"\nIncome per family member: " + wxString::Format(wxT("%.2f"), this->user->GetIncomePerFamMember());
-		current_user_info_label->SetLabel(user_information_string);
-	}
-	else
-	{
-		for (auto oprofile : other_profiles_labels_list)
-			oprofile->Destroy();
-		PlaceOtherProfiles(this->user->GetName(), search_field->GetValue());
+	if (running)
+		if (self_edition)
+		{
+			this->user->ReloadUser();
+			wxString user_information_string =
+				"Name: " + this->user->GetName() +
+				"\nParticipation in social events: " + this->user->GetParticipation() +
+				"\nNumber: " + this->user->GetNumber() +
+				"\nGrade point average: " + wxString::Format(wxT("%.2f"), this->user->GetGPA()) +
+				"\nIncome per family member: " + wxString::Format(wxT("%.2f"), this->user->GetIncomePerFamMember());
+			current_user_info_label->SetLabel(user_information_string);
+			profile_scroll_panel->FitInside();
+			profile_scroll_panel->Layout();
+		}
+		else
+		{
+			for (auto oprofile : other_profiles_labels_list)
+				oprofile->Destroy();
+			PlaceOtherProfiles(this->user->GetName(), search_field->GetValue());
 
-		all_objects.clear();
-		App::GetAllChildren(this, all_objects);
-		PaintObjects(this->user->GetTheme());
-	}
+			all_objects.clear();
+			App::GetAllChildren(this, all_objects);
+			PaintObjects(this->user->GetTheme());
+		}
+	else
+		edit_window->Close(true);
 }
